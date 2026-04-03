@@ -6,6 +6,7 @@ import { Loader2 } from 'lucide-react';
 import { getFileContent, saveFile } from '@/lib/api';
 import { toast } from 'sonner';
 import { EditorTopBar } from '@/components/editor-top-bar';
+import { EditorEmptyState } from '@/components/editor-empty-state';
 
 interface EditorPanelProps {
   filePath: string;
@@ -51,6 +52,12 @@ export function EditorPanel({ filePath, onConflict }: EditorPanelProps) {
 
     if (filePath) {
       loadFile();
+    } else {
+      // No file selected, reset state immediately
+      setIsLoading(false);
+      setContent('');
+      setIsModified(false);
+      setMtime(null);
     }
   }, [filePath]);
 
@@ -175,6 +182,11 @@ export function EditorPanel({ filePath, onConflict }: EditorPanelProps) {
     // Set tab size
     editor.getModel()?.updateOptions({ tabSize: 4 });
   };
+
+  // Show empty state when no file is selected
+  if (!filePath) {
+    return <EditorEmptyState />;
+  }
 
   if (isLoading) {
     return (

@@ -1,7 +1,7 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, Folder, FileText, Shield, Users, PanelLeftClose, PanelLeft } from 'lucide-react';
+import { ChevronRight, Folder, FileText, Shield, Users, KeyRound, PanelLeftClose, PanelLeft } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import type { FileNode } from '@/lib/api';
@@ -35,24 +35,38 @@ function TreeNode({
         <Folder
           className="w-3.5 h-3.5"
           style={{
-            color: isExpanded
-              ? 'hsl(210, 100%, 60%)'
-              : 'hsl(210, 100%, 60%, 0.6)'
+            color: isExpanded ? '#7aa2f7' : '#7aa2f799' // Blue - Folders
           }}
         />
       );
     }
-    // File icons with color coding
-    if (node.icon === 'users') {
-      return <Users className="w-3.5 h-3.5" style={{ color: 'hsl(38, 95%, 60%)' }} />;
+
+    // File icons with FreeRADIUS-specific color coding
+    // Users - Amber
+    if (node.icon === 'users' || node.path?.toLowerCase().includes('user')) {
+      return <Users className="w-3.5 h-3.5" style={{ color: '#ff9e64' }} />;
     }
-    if (node.icon === 'shield') {
-      return <Shield className="w-3.5 h-3.5" style={{ color: 'hsl(270, 80%, 65%)' }} />;
+
+    // Clients - Violet
+    if (node.icon === 'shield' || node.path?.toLowerCase().includes('client')) {
+      return <Shield className="w-3.5 h-3.5" style={{ color: '#c084fc' }} />;
     }
-    if (node.path?.includes('eap') || node.path?.includes('tls')) {
-      return <FileText className="w-3.5 h-3.5" style={{ color: 'hsl(145, 80%, 55%)' }} />;
+
+    // Certificates - Green (EAP, TLS, certs, keys, etc.)
+    if (
+      node.path?.toLowerCase().includes('eap') ||
+      node.path?.toLowerCase().includes('tls') ||
+      node.path?.toLowerCase().includes('cert') ||
+      node.path?.toLowerCase().includes('key') ||
+      node.path?.toLowerCase().includes('ca') ||
+      node.path?.toLowerCase().includes('pem') ||
+      node.path?.toLowerCase().includes('crl')
+    ) {
+      return <KeyRound className="w-3.5 h-3.5" style={{ color: '#9ece6a' }} />;
     }
-    return <FileText className="w-3.5 h-3.5" style={{ color: 'hsl(210, 100%, 60%, 0.7)' }} />;
+
+    // Default config files - Purple
+    return <FileText className="w-3.5 h-3.5" style={{ color: '#bb9af7' }} />;
   };
 
   const isActive = node.type === 'file' && node.path === activeFile;
@@ -72,14 +86,14 @@ function TreeNode({
           paddingRight: '8px',
           gap: '6px',
           backgroundColor: isActive
-            ? 'hsl(210, 100%, 60%, 0.1)'
+            ? '#7aa2f720' // Blue background for active
             : 'transparent',
           color: isActive
-            ? 'hsl(210, 100%, 60%)'
+            ? '#7aa2f7' // Blue text for active
             : isDirectory
-              ? 'hsl(210, 20%, 70%)'
-              : 'hsl(215, 15%, 55%)',
-          borderLeft: isActive ? '2px solid hsl(210, 100%, 60%)' : '2px solid transparent',
+              ? '#c9d1d9' // Light gray for directories
+              : '#8b949e', // Muted gray for files
+          borderLeft: isActive ? '2px solid #7aa2f7' : '2px solid transparent',
           fontSize: isDirectory ? '12px' : '11px',
           fontFamily: isDirectory ? 'var(--font-inter)' : 'var(--font-jetbrains-mono)',
           fontWeight: isDirectory ? '500' : '400',
@@ -94,17 +108,17 @@ function TreeNode({
         onMouseEnter={(e) => {
           if (!isActive) {
             e.currentTarget.style.backgroundColor = isDirectory
-              ? 'hsl(225, 15%, 16%, 0.5)'
-              : 'hsl(225, 15%, 16%, 0.3)';
-            e.currentTarget.style.color = 'hsl(210, 40%, 92%)';
+              ? '#161b2280' // Darker hover for directories
+              : '#161b2250'; // Lighter hover for files
+            e.currentTarget.style.color = '#c9d1d9'; // Light text on hover
           }
         }}
         onMouseLeave={(e) => {
           if (!isActive) {
             e.currentTarget.style.backgroundColor = 'transparent';
             e.currentTarget.style.color = isDirectory
-              ? 'hsl(210, 20%, 70%)'
-              : 'hsl(215, 15%, 55%)';
+              ? '#c9d1d9'
+              : '#8b949e';
           }
         }}
       >
@@ -113,7 +127,7 @@ function TreeNode({
             animate={{ rotate: isExpanded ? 90 : 0 }}
             transition={{ duration: 0.15 }}
           >
-            <ChevronRight className="w-3 h-3" style={{ color: 'hsl(215, 15%, 55%)' }} />
+            <ChevronRight className="w-3 h-3" style={{ color: '#6e7681' }} />
           </motion.div>
         )}
         {getIcon()}

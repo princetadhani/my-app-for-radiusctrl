@@ -31,20 +31,8 @@ export default function Home() {
         const tree = await getFileTree();
         setFileTree(tree);
 
-        // Set default active file to first file in tree
-        const findFirstFile = (nodes: FileNode[]): string | null => {
-          for (const node of nodes) {
-            if (node.type === 'file') return node.path;
-            if (node.children) {
-              const found = findFirstFile(node.children);
-              if (found) return found;
-            }
-          }
-          return null;
-        };
-
-        const firstFile = findFirstFile(tree);
-        if (firstFile) setActiveFile(firstFile);
+        // Do NOT auto-load any file - let the user select one
+        // This allows the empty state with animations to show
       } catch (error) {
         console.error('Error loading file tree:', error);
         toast.error('Failed to load file tree');
