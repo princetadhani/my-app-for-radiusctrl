@@ -82,12 +82,24 @@ body {
   box-shadow: 0 0 20px hsl(210 100% 60% / 0.3);
 }
 
+.neon-glow-blue:hover {
+  box-shadow: 0 0 24px hsl(210 100% 60% / 0.5);
+}
+
 .neon-glow-green {
   box-shadow: 0 0 20px hsl(145 80% 55% / 0.3);
 }
 
+.neon-glow-green:hover {
+  box-shadow: 0 0 24px hsl(145 80% 55% / 0.5);
+}
+
 .neon-glow-amber {
   box-shadow: 0 0 20px hsl(38 95% 60% / 0.3);
+}
+
+.neon-glow-amber:hover {
+  box-shadow: 0 0 24px hsl(38 95% 60% / 0.5);
 }
 
 .neon-text-blue {

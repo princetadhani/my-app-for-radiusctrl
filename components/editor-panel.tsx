@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import Editor from '@monaco-editor/react';
+import Editor, { OnMount } from '@monaco-editor/react';
 import { Loader2 } from 'lucide-react';
 import { getFileContent, saveFile } from '@/lib/api';
 import { toast } from 'sonner';
@@ -78,10 +78,80 @@ export function EditorPanel({ filePath, onConflict }: EditorPanelProps) {
     setIsModified(true);
   };
 
-  const handleEditorDidMount = (editor: any) => {
+  const handleEditorDidMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
 
-    // Define custom theme
+    // Define the custom "radius-dark" theme
+    monaco.editor.defineTheme("radius-dark", {
+      base: "vs-dark",
+      inherit: true,
+
+      // Syntax highlighting token colors
+      rules: [
+        { token: "comment", foreground: "5c6a7a", fontStyle: "italic" },
+        { token: "keyword", foreground: "7aa2f7" },
+        { token: "string", foreground: "9ece6a" },
+        { token: "number", foreground: "ff9e64" },
+        { token: "variable", foreground: "bb9af7" },
+      ],
+
+      // Editor UI colors
+      colors: {
+        // Main editor background (deep dark navy-black)
+        "editor.background": "#0d1117",
+
+        // Text foreground (light gray-blue)
+        "editor.foreground": "#c9d1d9",
+
+        // Current line highlight (subtle dark)
+        "editor.lineHighlightBackground": "#161b22",
+
+        // Text selection (blue tint)
+        "editor.selectionBackground": "#264f78",
+
+        // Cursor color (neon blue)
+        "editorCursor.foreground": "#58a6ff",
+
+        // Selection match highlight
+        "editor.selectionHighlightBackground": "#3a3d41",
+
+        // Line numbers (muted gray)
+        "editorLineNumber.foreground": "#3b4252",
+
+        // Active line number (neon blue)
+        "editorLineNumber.activeForeground": "#7aa2f7",
+
+        // Indent guides (very subtle)
+        "editorIndentGuide.background": "#1e2430",
+        "editorIndentGuide.activeBackground": "#2a3040",
+
+        // Gutter (left margin with line numbers)
+        "editorGutter.background": "#0d1117",
+
+        // Minimap background
+        "minimap.background": "#0d1117",
+
+        // Scrollbar
+        "scrollbar.shadow": "#00000000",
+        "scrollbarSlider.background": "#2a3040",
+        "scrollbarSlider.hoverBackground": "#3a4050",
+      },
+    });
+
+    // Apply the theme
+    monaco.editor.setTheme("radius-dark");
+
+    // Add keyboard shortcut for save (Ctrl/Cmd + S)
+    editor.addAction({
+      id: "save-file",
+      label: "Save File",
+      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS],
+      run: () => {
+        handleSaveFile();
+      },
+    });
+
+    // Set tab size
     editor.getModel()?.updateOptions({ tabSize: 4 });
   };
 
@@ -129,7 +199,7 @@ export function EditorPanel({ filePath, onConflict }: EditorPanelProps) {
       />
 
       {/* Monaco Editor */}
-      <div className="flex-1 relative bg-[#1e1e1e] min-h-0">
+      <div className="flex-1 relative bg-[#0d1117] min-h-0">
         <Editor
           key={filePath}
           height="100%"
@@ -138,29 +208,52 @@ export function EditorPanel({ filePath, onConflict }: EditorPanelProps) {
           value={content}
           onChange={handleEditorChange}
           onMount={handleEditorDidMount}
-          theme="vs-dark"
+          theme="radius-dark"
           loading={
             <div className="flex items-center justify-center h-full">
               <Loader2 className="w-6 h-6 animate-spin text-primary" />
             </div>
           }
           options={{
-            minimap: { enabled: true },
+            // Typography
             fontSize: 13,
-            lineNumbers: 'on',
-            renderWhitespace: 'selection',
+            fontFamily: "var(--font-jetbrains-mono), 'JetBrains Mono', monospace",
+            fontLigatures: true,
+            lineHeight: 20,
+
+            // Minimap
+            minimap: {
+              enabled: true,
+              scale: 1,
+              showSlider: "mouseover"
+            },
+
+            // Behavior
             scrollBeyondLastLine: false,
+            smoothScrolling: true,
+            cursorBlinking: "smooth",
+            cursorSmoothCaretAnimation: "on",
             automaticLayout: true,
             tabSize: 4,
             wordWrap: 'off',
-            fontFamily: 'JetBrains Mono, Consolas, Monaco, monospace',
             readOnly: false,
+
+            // Visual
+            renderWhitespace: "selection",
+            bracketPairColorization: { enabled: true },
+            padding: { top: 12 },
+
+            // UI Elements
+            overviewRulerBorder: false,
+            hideCursorInOverviewRuler: true,
+
+            // Scrollbar
+            scrollbar: {
+              verticalScrollbarSize: 6,
+              horizontalScrollbarSize: 6,
+            },
           }}
         />
-        {/* Debug overlay */}
-        <div className="absolute top-2 right-2 z-10 text-xs text-white bg-black/80 px-2 py-1 rounded border border-gray-600">
-          {content.length} chars | {filePath.split('/').pop()}
-        </div>
       </div>
     </div>
   );
