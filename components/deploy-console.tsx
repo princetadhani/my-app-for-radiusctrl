@@ -3,12 +3,15 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronUp, ChevronDown, Play, Trash2 } from 'lucide-react';
-import { deployConfiguration, type DeployOutput } from '@/lib/api';
+import { validateConfiguration, reloadService } from '@/lib/api';
+import { toast } from 'sonner';
+
+type LineType = 'cmd' | 'info' | 'success' | 'error' | 'final-success' | 'final-error';
 
 interface AnimatedLine {
   fullText: string;
   displayedText: string;
-  type: DeployOutput['type'];
+  type: LineType;
   isComplete: boolean;
 }
 
@@ -34,7 +37,7 @@ export function DeployConsole() {
     };
   }, []);
 
-  const animateText = async (text: string, type: DeployOutput['type'], lineIndex: number) => {
+  const animateText = async (text: string, type: LineType, lineIndex: number) => {
     const chars = text.split('');
     for (let i = 0; i <= chars.length; i++) {
       await new Promise(resolve => {
@@ -55,44 +58,119 @@ export function DeployConsole() {
     }
   };
 
+  const addLine = async (text: string, type: LineType, delay = 0) => {
+    if (delay > 0) {
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+
+    let lineIndex = 0;
+    setLines(prev => {
+      lineIndex = prev.length;
+      return [...prev, {
+        fullText: text,
+        displayedText: '',
+        type,
+        isComplete: false,
+      }];
+    });
+
+    // Small delay to ensure state update
+    await new Promise(resolve => setTimeout(resolve, 50));
+    await animateText(text, type, lineIndex);
+  };
+
   const handleDeploy = async () => {
     setIsOpen(true);
     setIsValidating(true);
     setIsRunning(true);
     setLines([]);
 
-    // Simulate validation phase (minimum 800ms)
-    await new Promise(resolve => setTimeout(resolve, 800));
-    setIsValidating(false);
+    try {
+      // Step 1: Show command
+      await addLine('$ freeradius -C -D /etc/freeradius/3.0/', 'cmd', 0);
+      await addLine('Validating configuration...', 'info', 400);
 
-    const deployOutputs = await deployConfiguration();
+      // Step 2: Validate configuration
+      setIsValidating(true);
+      const validationResult = await validateConfiguration();
+      setIsValidating(false);
 
-    for (let i = 0; i < deployOutputs.length; i++) {
-      // Wait for the delay
-      if (deployOutputs[i].delay > 0) {
-        await new Promise(resolve => setTimeout(resolve, deployOutputs[i].delay));
+      if (!validationResult.success) {
+        // Validation failed - show detailed output
+        await addLine('ERROR: Configuration validation failed', 'error', 200);
+
+        // Show the actual error message from backend
+        if (validationResult.error) {
+          const errorLines = validationResult.error.split('\n').filter(line => line.trim());
+          for (const line of errorLines) {
+            await addLine(line.trim(), 'error', 100);
+          }
+        }
+
+        // Also show key lines from full output if available
+        if (validationResult.output && !validationResult.error) {
+          const errorLines = validationResult.output
+            .split('\n')
+            .filter(line =>
+              line.includes('Parse error') ||
+              line.includes('Unknown') ||
+              line.includes('Duplicate') ||
+              line.includes('Failed') ||
+              line.includes('ERROR') ||
+              line.includes('Unable to') ||
+              line.includes('Permission denied') ||
+              line.includes('error:')
+            )
+            .slice(0, 15); // Show first 15 error lines
+
+          for (const line of errorLines) {
+            await addLine(line.trim(), 'error', 100);
+          }
+        }
+
+        await addLine('✗ Configuration validation failed. Deploy aborted.', 'final-error', 400);
+        toast.error('Configuration validation failed');
+        setIsRunning(false);
+        return;
       }
 
-      // Add new line
-      setLines(prev => [...prev, {
-        fullText: deployOutputs[i].text,
-        displayedText: '',
-        type: deployOutputs[i].type,
-        isComplete: false,
-      }]);
+      // Parse validation output to show modules loading
+      const outputLines = validationResult.output.split('\n').filter(line => line.trim());
+      for (const line of outputLines.slice(0, 5)) {
+        if (line.includes('including') || line.includes('Reading') || line.includes('Module')) {
+          await addLine(`  ${line.trim()}`, 'info', 200);
+        }
+      }
 
-      // Animate the text character by character
-      await animateText(deployOutputs[i].text, deployOutputs[i].type, i);
+      await addLine('Configuration appears to be OK', 'success', 400);
+
+      // Step 3: Reload service
+      await addLine('$ systemctl reload freeradius', 'cmd', 500);
+      await addLine('Reloading FreeRADIUS service...', 'info', 300);
+
+      const reloadResult = await reloadService();
+
+      if (reloadResult.success) {
+        await addLine('✓ Deploy complete. Service reloaded successfully.', 'final-success', 500);
+        toast.success('Configuration deployed successfully');
+      } else {
+        await addLine('✗ Failed to reload service: ' + reloadResult.message, 'final-error', 300);
+        toast.error('Failed to reload service');
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      await addLine('✗ Error: ' + errorMsg, 'final-error', 100);
+      toast.error('Deployment failed');
+    } finally {
+      setIsRunning(false);
     }
-
-    setIsRunning(false);
   };
 
   const handleClear = () => {
     setLines([]);
   };
 
-  const getOutputClass = (type: DeployOutput['type']) => {
+  const getOutputClass = (type: LineType) => {
     switch (type) {
       case 'cmd':
         return 'text-neon-blue font-semibold';

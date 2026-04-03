@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, Folder, FileText, Shield, Users, PanelLeftClose, PanelLeft } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import type { FileNode } from '@/lib/mock-data';
+import type { FileNode } from '@/lib/api';
 
 interface FileTreeProps {
   nodes: FileNode[];
@@ -26,7 +26,8 @@ function TreeNode({
   onFileSelect: (path: string) => void;
   level?: number;
 }) {
-  const [isExpanded, setIsExpanded] = useState(level === 0);
+  // Start with all directories collapsed for cleaner initial view
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const getIcon = () => {
     if (node.type === 'directory') {

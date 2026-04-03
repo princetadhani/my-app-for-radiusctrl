@@ -5,39 +5,44 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Pause, Trash2, Download, FileText, Activity, PanelLeftClose, PanelLeft } from 'lucide-react';
 import { StatusHeader } from '@/components/status-header';
 import { Button } from '@/components/ui/button';
-import { generateMockLogs, type LogEntry } from '@/lib/api';
+import { readLogs, getSocket, type LogEntry } from '@/lib/api';
+import { toast } from 'sonner';
 
 export default function LogsPage() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [isStreaming, setIsStreaming] = useState(true);
+  const [isStreaming, setIsStreaming] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isConsoleOpen, setIsConsoleOpen] = useState(true);
   const consoleRef = useRef<HTMLDivElement>(null);
 
+  // Load initial logs
   useEffect(() => {
-    // Initial load
-    setLogs(generateMockLogs());
-
-    // Auto-add new logs if streaming
-    const interval = setInterval(() => {
-      if (isStreaming) {
-        const newLog: LogEntry = {
-          timestamp: new Date().toISOString().replace('T', ' ').split('.')[0],
-          level: ['INFO', 'DEBUG', 'WARN', 'ERROR'][Math.floor(Math.random() * 4)] as LogEntry['level'],
-          message: [
-            'Processing authentication request',
-            'EAP session established',
-            'SQL query executed successfully',
-            'LDAP bind completed',
-            'Access-Accept sent to client',
-            'Packet received from NAS',
-          ][Math.floor(Math.random() * 6)],
-        };
-        setLogs(prev => [...prev, newLog]);
+    const loadLogs = async () => {
+      try {
+        const initialLogs = await readLogs(100);
+        setLogs(initialLogs);
+      } catch (error) {
+        console.error('Error loading logs:', error);
+        toast.error('Failed to load logs');
       }
-    }, 2000);
+    };
 
-    return () => clearInterval(interval);
+    loadLogs();
+  }, []);
+
+  // Setup WebSocket listener for live log streaming
+  useEffect(() => {
+    const socket = getSocket();
+
+    socket.on('log:newEntry', (logEntry: LogEntry) => {
+      if (isStreaming) {
+        setLogs(prev => [...prev, logEntry]);
+      }
+    });
+
+    return () => {
+      socket.off('log:newEntry');
+    };
   }, [isStreaming]);
 
   useEffect(() => {

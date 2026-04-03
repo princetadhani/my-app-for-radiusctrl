@@ -3,8 +3,7 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, FileText, Command as CommandIcon } from 'lucide-react';
-import { mockFileTree } from '@/lib/mock-data';
-import type { FileNode } from '@/lib/mock-data';
+import { getFileTree, type FileNode } from '@/lib/api';
 
 interface CommandPaletteProps {
   onFileSelect: (path: string) => void;
@@ -38,7 +37,22 @@ export function CommandPalette({ onFileSelect }: CommandPaletteProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [allFiles] = useState(() => flattenFiles(mockFileTree));
+  const [allFiles, setAllFiles] = useState<SearchResult[]>([]);
+
+  // Load file tree on mount
+  useEffect(() => {
+    const loadFiles = async () => {
+      try {
+        const tree = await getFileTree();
+        const files = flattenFiles(tree);
+        setAllFiles(files);
+      } catch (error) {
+        console.error('Error loading files:', error);
+      }
+    };
+
+    loadFiles();
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -135,9 +149,8 @@ export function CommandPalette({ onFileSelect }: CommandPaletteProps) {
                   filteredResults.map((result, index) => (
                     <div
                       key={index}
-                      className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${
-                        index === selectedIndex ? 'bg-primary/10' : 'hover:bg-secondary/50'
-                      }`}
+                      className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${index === selectedIndex ? 'bg-primary/10' : 'hover:bg-secondary/50'
+                        }`}
                       onClick={() => {
                         if (result.path) {
                           onFileSelect(result.path);

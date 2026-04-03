@@ -1,36 +1,75 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🎨 RADIUSCTRL - FreeRADIUS Management Console
 
-## Getting Started
+A modern, production-ready web interface for managing FreeRADIUS configuration with real-time collaboration support.
 
-First, run the development server:
+![Next.js](https://img.shields.io/badge/Next.js-16.2.2-black)
+![React](https://img.shields.io/badge/React-19.2.4-blue)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
+![Node.js](https://img.shields.io/badge/Node.js-20+-green)
+![Express](https://img.shields.io/badge/Express-4.19-lightgrey)
+
+## ✨ Features
+
+### 🎯 Core Functionality
+
+- **📂 Real-Time File Management**: Browse and edit `/etc/freeradius/3.0/` configuration files
+- **🔄 Shadow Buffer**: Detect concurrent file modifications (UI vs SSH)
+- **✅ Safe Deployment**: Atomic copy, validate with `freeradius -C`, then deploy
+- **📊 Live Log Streaming**: Real-time log monitoring with pause/resume
+- **📡 COA Commands**: Execute Change-of-Authorization and Disconnect requests
+- **⚙️ Service Management**: Monitor status, reload, restart FreeRADIUS service
+
+### 🎨 Modern UI
+
+- **Dark Glassmorphism Theme** with neon accents
+- **Monaco Editor** with syntax highlighting
+- **Framer Motion** animations
+- **WebSocket** real-time updates
+- **Responsive Design** for desktop and mobile
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- Node.js 20+
+- FreeRADIUS 3.0+
+- Linux with systemd
+- sudo access
+
+### Installation
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Run setup script
+chmod +x scripts/setup.sh
+./scripts/setup.sh
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Running
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+**Terminal 1 - Backend:**
+```bash
+cd backend
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**Terminal 2 - Frontend:**
+```bash
+npm run dev
+```
 
-## Learn More
+Access the UI at: **http://localhost:3000**
 
-To learn more about Next.js, take a look at the following resources:
+## 📖 Documentation
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **[SETUP_GUIDE.md](./SETUP_GUIDE.md)** - Complete installation guide
+- **[backend/README.md](./backend/README.md)** - Backend API documentation
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🏗️ Architecture
 
-## Deploy on Vercel
+Frontend: Next.js + React + WebSocket → Backend: Node.js + Express → FreeRADIUS
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 📞 Support
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+For issues or questions, please open an issue on GitHub.
+
+Built with ❤️ for network administrators

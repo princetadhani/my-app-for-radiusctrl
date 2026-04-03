@@ -7,6 +7,7 @@ import Editor from '@monaco-editor/react';
 import { StatusHeader } from '@/components/status-header';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { executeCoaCommand, listCoaFiles, getCoaFileContent, createCoaFile, deleteCoaFile } from '@/lib/api';
 
 interface CoaTemplate {
   id: string;
@@ -18,37 +19,78 @@ interface CoaTemplate {
 }
 
 export default function CoaPage() {
-  const [templates, setTemplates] = useState<CoaTemplate[]>([
-    {
-      id: '1',
-      name: 'Disconnect User',
-      type: 'disconnect',
-      nasIp: '192.168.1.1',
-      nasSecret: 'testing123',
-      attributes: 'Acct-Session-Id = "12345"\nFramed-IP-Address = "192.168.1.100"',
-    },
-    {
-      id: '2',
-      name: 'Change Bandwidth',
-      type: 'coa',
-      nasIp: '192.168.1.1',
-      nasSecret: 'testing123',
-      attributes: 'User-Name = "john@example.com"\nFilter-Id = "bandwidth-limit-1M"',
-    },
-  ]);
-
-  const [selectedTemplate, setSelectedTemplate] = useState<CoaTemplate | null>(templates[0]);
+  const [templates, setTemplates] = useState<CoaTemplate[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<CoaTemplate | null>(null);
   const [requestType, setRequestType] = useState<'coa' | 'disconnect'>('disconnect');
   const [nasIp, setNasIp] = useState('192.168.1.1');
   const [nasSecret, setNasSecret] = useState('testing123');
-  const [attributes, setAttributes] = useState('Acct-Session-Id = "12345"\nFramed-IP-Address = "192.168.1.100"');
+  const [attributes, setAttributes] = useState('User-Name = "testuser"\nFramed-IP-Address = "192.168.1.100"');
   const [response, setResponse] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isConsoleOpen, setIsConsoleOpen] = useState(false);
   const [isModified, setIsModified] = useState(false);
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
   const consoleRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<any>(null);
+
+  // Load COA templates from backend
+  useEffect(() => {
+    const loadTemplates = async () => {
+      setIsLoadingTemplates(true);
+      try {
+        const files = await listCoaFiles();
+        console.log('COA files from backend:', files);
+
+        // Check if files is an array
+        if (!Array.isArray(files)) {
+          console.warn('Backend returned non-array:', files);
+          setIsLoadingTemplates(false);
+          return;
+        }
+
+        // Convert backend files to template format
+        const loadedTemplates: CoaTemplate[] = await Promise.all(
+          files.map(async (file: any) => {
+            try {
+              // Handle both string and object formats
+              const fileName = typeof file === 'string' ? file : (file.name || file.filename);
+
+              if (!fileName) {
+                console.warn('File entry has no name:', file);
+                return null;
+              }
+
+              const content = await getCoaFileContent(fileName);
+
+              // Parse the file content to extract type, nasIp, etc.
+              // For now, just create a basic template
+              return {
+                id: fileName,
+                name: fileName.replace('.txt', '').replace('.coa', '').replace(/_/g, ' '),
+                type: fileName.includes('disconnect') ? 'disconnect' : 'coa',
+                nasIp: '192.168.1.1', // Default, can be parsed from file
+                nasSecret: 'testing123', // Default, can be parsed from file
+                attributes: content,
+              };
+            } catch (error) {
+              console.error(`Failed to load template:`, error);
+              return null;
+            }
+          })
+        );
+
+        setTemplates(loadedTemplates.filter(t => t !== null) as CoaTemplate[]);
+      } catch (error) {
+        console.error('Failed to load COA templates:', error);
+        toast.error('Failed to load COA templates');
+      } finally {
+        setIsLoadingTemplates(false);
+      }
+    };
+
+    loadTemplates();
+  }, []);
 
   useEffect(() => {
     if (consoleRef.current) {
@@ -59,51 +101,74 @@ export default function CoaPage() {
   const handleSend = async () => {
     setIsConsoleOpen(true);
     setIsSending(true);
-    setResponse('$ echo-coa-client\n');
-
-    await new Promise(resolve => setTimeout(resolve, 300));
+    setResponse(`$ radclient -f <file> -x -r 1 ${nasIp} ${requestType} ${nasSecret}\n`);
     setResponse(prev => prev + `Connecting to NAS ${nasIp}:3799...\n`);
+    setResponse(prev => prev + `Sending ${requestType.toUpperCase()} request...\n\n`);
 
-    await new Promise(resolve => setTimeout(resolve, 400));
-    setResponse(prev => prev + `Sending ${requestType.toUpperCase()} request...\n`);
+    try {
+      const result = await executeCoaCommand({
+        type: requestType,
+        nasIp,
+        nasSecret,
+        attributes,
+      });
 
-    await new Promise(resolve => setTimeout(resolve, 600));
+      setResponse(prev => prev + result.output + '\n');
 
-    // Simulate success 80% of the time
-    if (Math.random() < 0.8) {
-      setResponse(prev => prev + `\n✓ CoA-ACK received from NAS\n`);
-      setResponse(prev => prev + `Request processed successfully.\n`);
-      toast.success('CoA request sent successfully');
-    } else {
-      setResponse(prev => prev + `\n✗ CoA-NAK received from NAS\n`);
-      setResponse(prev => prev + `Error: Session not found or invalid attributes.\n`);
-      toast.error('CoA request failed');
+      if (result.success) {
+        toast.success('COA request sent successfully');
+      } else {
+        toast.error('COA request failed');
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      setResponse(prev => prev + `\n✗ Error: ${errorMsg}\n`);
+      toast.error('Failed to send COA request');
+    } finally {
+      setIsSending(false);
     }
-
-    setIsSending(false);
   };
 
-  const handleAddTemplate = () => {
-    const newTemplate: CoaTemplate = {
-      id: Date.now().toString(),
-      name: 'New Template',
-      type: requestType,
-      nasIp,
-      nasSecret,
-      attributes,
-    };
-    setTemplates([...templates, newTemplate]);
-    setIsModified(false);
-    toast.success('Template saved');
+  const handleAddTemplate = async () => {
+    const templateName = prompt('Enter template name:');
+    if (!templateName) return;
+
+    try {
+      const fileName = `${templateName.replace(/\s+/g, '_')}.txt`;
+
+      await createCoaFile(fileName, attributes);
+
+      const newTemplate: CoaTemplate = {
+        id: fileName,
+        name: templateName,
+        type: requestType,
+        nasIp,
+        nasSecret,
+        attributes,
+      };
+
+      setTemplates([...templates, newTemplate]);
+      setIsModified(false);
+      toast.success('Template saved successfully');
+    } catch (error) {
+      console.error('Failed to save template:', error);
+      toast.error('Failed to save template');
+    }
   };
 
-  const handleDeleteTemplate = (id: string) => {
-    setTemplates(templates.filter(t => t.id !== id));
-    if (selectedTemplate?.id === id) {
-      setSelectedTemplate(null);
-      setAttributes('');
+  const handleDeleteTemplate = async (id: string) => {
+    try {
+      await deleteCoaFile(id);
+      setTemplates(templates.filter(t => t.id !== id));
+      if (selectedTemplate?.id === id) {
+        setSelectedTemplate(null);
+        setAttributes('');
+      }
+      toast.success('Template deleted successfully');
+    } catch (error) {
+      console.error('Failed to delete template:', error);
+      toast.error('Failed to delete template');
     }
-    toast.success('Template deleted');
   };
 
   const handleSelectTemplate = (template: CoaTemplate) => {

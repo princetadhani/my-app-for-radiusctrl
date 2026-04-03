@@ -1,65 +1,6 @@
-import { mockFileContents } from './mock-data';
-
-// Mock delay
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-export interface FileContentResponse {
-  content: string;
-  mtime: number;
-}
-
-export interface SaveFileResponse {
-  status: 'success' | 'conflict';
-  mtime?: number;
-  disk_content?: string;
-  message?: string;
-}
-
-export interface RadiusStatus {
-  status: 'running' | 'stopped';
-  uptime?: number;
-  requests_per_second?: number;
-}
-
-export async function getFileContent(path: string): Promise<FileContentResponse> {
-  await delay(300);
-  return {
-    content: mockFileContents[path] || '# File not found',
-    mtime: Date.now(),
-  };
-}
-
-export async function saveFile(
-  path: string, 
-  content: string, 
-  mtime: number | null, 
-  force = false
-): Promise<SaveFileResponse> {
-  await delay(400);
-
-  // Simulate conflict 10% of the time
-  if (!force && Math.random() < 0.1) {
-    return {
-      status: 'conflict',
-      disk_content: '# Modified externally\n' + (mockFileContents[path] || ''),
-      message: 'File was modified on disk',
-    };
-  }
-
-  return {
-    status: 'success',
-    mtime: Date.now(),
-  };
-}
-
-export async function getRadiusStatus(): Promise<RadiusStatus> {
-  await delay(200);
-  return { 
-    status: 'running',
-    uptime: Math.floor(Date.now() / 1000) - 86400, // 1 day uptime
-    requests_per_second: Math.floor(Math.random() * 100) + 20,
-  };
-}
+// Re-export all functions and types from apiClient
+export * from './apiClient';
+import type { LogEntry } from './apiClient';
 
 export interface DeployOutput {
   text: string;
@@ -91,16 +32,13 @@ export const mockValidationError: DeployOutput[] = [
   { text: "✗ Configuration validation failed. Deploy aborted.", type: "final-error", delay: 1800 },
 ];
 
+// Mock delay helper
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 export async function deployConfiguration(): Promise<DeployOutput[]> {
   await delay(100);
   // 90% success rate
   return Math.random() < 0.9 ? mockValidationSuccess : mockValidationError;
-}
-
-export interface LogEntry {
-  timestamp: string;
-  level: 'INFO' | 'DEBUG' | 'WARN' | 'ERROR';
-  message: string;
 }
 
 export function generateMockLogs(): LogEntry[] {

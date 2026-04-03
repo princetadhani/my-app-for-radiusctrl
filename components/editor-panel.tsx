@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import Editor, { OnMount } from '@monaco-editor/react';
 import { Loader2 } from 'lucide-react';
 import { getFileContent, saveFile } from '@/lib/api';
@@ -26,6 +26,15 @@ export function EditorPanel({ filePath, onConflict }: EditorPanelProps) {
       console.log('Loading file:', filePath);
       try {
         const data = await getFileContent(filePath);
+        console.log('API Response:', data);
+
+        if (!data || !data.content) {
+          console.error('Invalid response from API:', data);
+          toast.error('Invalid file data received');
+          setContent('');
+          return;
+        }
+
         console.log('File loaded, content length:', data.content.length);
         console.log('First 100 chars:', data.content.substring(0, 100));
         setContent(data.content);
@@ -33,14 +42,45 @@ export function EditorPanel({ filePath, onConflict }: EditorPanelProps) {
         setIsModified(false);
       } catch (error) {
         console.error('Failed to load file:', error);
-        toast.error('Failed to load file');
+        toast.error('Failed to load file: ' + (error instanceof Error ? error.message : String(error)));
+        setContent('');
       } finally {
         setIsLoading(false);
       }
     };
 
-    loadFile();
+    if (filePath) {
+      loadFile();
+    }
   }, [filePath]);
+
+  const handleSaveFile = useCallback(async (forceOrEvent?: boolean | any) => {
+    // Handle both direct calls and event handler calls
+    const force = typeof forceOrEvent === 'boolean' ? forceOrEvent : false;
+
+    setIsSaving(true);
+    console.log('💾 Saving file:', filePath, 'Content length:', content.length, 'mtime:', mtime, 'force:', force);
+    try {
+      const result = await saveFile(filePath, content, mtime, force);
+      console.log('💾 Save result:', result);
+
+      if (result.status === 'conflict' && result.disk_content) {
+        console.warn('⚠️  Conflict detected');
+        onConflict?.(result.disk_content, content);
+        toast.warning('File was modified externally. Please resolve the conflict.');
+      } else if (result.status === 'success') {
+        console.log('✅ File saved successfully');
+        setMtime(result.mtime || Date.now());
+        setIsModified(false);
+        toast.success('File saved successfully');
+      }
+    } catch (error) {
+      console.error('❌ Save error:', error);
+      toast.error('Failed to save file: ' + (error instanceof Error ? error.message : String(error)));
+    } finally {
+      setIsSaving(false);
+    }
+  }, [filePath, content, mtime, onConflict]);
 
   useEffect(() => {
     const handleSave = (e: KeyboardEvent) => {
@@ -52,26 +92,7 @@ export function EditorPanel({ filePath, onConflict }: EditorPanelProps) {
 
     document.addEventListener('keydown', handleSave);
     return () => document.removeEventListener('keydown', handleSave);
-  }, [content, mtime]);
-
-  const handleSaveFile = async (force = false) => {
-    setIsSaving(true);
-    try {
-      const result = await saveFile(filePath, content, mtime, force);
-
-      if (result.status === 'conflict' && result.disk_content) {
-        onConflict?.(result.disk_content, content);
-      } else if (result.status === 'success') {
-        setMtime(result.mtime || Date.now());
-        setIsModified(false);
-        toast.success('File saved successfully');
-      }
-    } catch (error) {
-      toast.error('Failed to save file');
-    } finally {
-      setIsSaving(false);
-    }
-  };
+  }, [handleSaveFile]);
 
   const handleEditorChange = (value: string | undefined) => {
     setContent(value || '');
