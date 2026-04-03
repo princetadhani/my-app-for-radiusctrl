@@ -30,25 +30,59 @@ function TreeNode({
 
   const getIcon = () => {
     if (node.type === 'directory') {
-      return <Folder className="w-4 h-4 text-neon-blue" />;
+      return (
+        <Folder
+          className="w-3.5 h-3.5"
+          style={{
+            color: isExpanded
+              ? 'hsl(210, 100%, 60%)'
+              : 'hsl(210, 100%, 60%, 0.6)'
+          }}
+        />
+      );
+    }
+    // File icons with color coding
+    if (node.icon === 'users') {
+      return <Users className="w-3.5 h-3.5" style={{ color: 'hsl(38, 95%, 60%)' }} />;
     }
     if (node.icon === 'shield') {
-      return <Shield className="w-4 h-4 text-neon-purple" />;
+      return <Shield className="w-3.5 h-3.5" style={{ color: 'hsl(270, 80%, 65%)' }} />;
     }
-    if (node.icon === 'users') {
-      return <Users className="w-4 h-4 text-neon-amber" />;
+    if (node.path?.includes('eap') || node.path?.includes('tls')) {
+      return <FileText className="w-3.5 h-3.5" style={{ color: 'hsl(145, 80%, 55%)' }} />;
     }
-    return <FileText className="w-4 h-4 text-primary" />;
+    return <FileText className="w-3.5 h-3.5" style={{ color: 'hsl(210, 100%, 60%, 0.7)' }} />;
   };
 
   const isActive = node.type === 'file' && node.path === activeFile;
+  const isDirectory = node.type === 'directory';
+
+  // Calculate padding based on depth
+  const paddingLeft = isDirectory ? (level * 12) + 8 : (level * 12) + 20;
 
   return (
     <div>
       <motion.div
-        className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer hover:bg-secondary/50 transition-colors ${isActive ? 'bg-primary/10 border-l-2 border-primary' : ''
-          }`}
-        style={{ paddingLeft: `${level * 12 + 8}px` }}
+        className="flex items-center w-full rounded-sm cursor-pointer select-none transition-all duration-200"
+        style={{
+          paddingLeft: `${paddingLeft}px`,
+          paddingTop: '4px',
+          paddingBottom: '4px',
+          paddingRight: '8px',
+          gap: '6px',
+          backgroundColor: isActive
+            ? 'hsl(210, 100%, 60%, 0.1)'
+            : 'transparent',
+          color: isActive
+            ? 'hsl(210, 100%, 60%)'
+            : isDirectory
+              ? 'hsl(210, 20%, 70%)'
+              : 'hsl(215, 15%, 55%)',
+          borderLeft: isActive ? '2px solid hsl(210, 100%, 60%)' : '2px solid transparent',
+          fontSize: isDirectory ? '12px' : '11px',
+          fontFamily: isDirectory ? 'var(--font-inter)' : 'var(--font-jetbrains-mono)',
+          fontWeight: isDirectory ? '500' : '400',
+        }}
         onClick={() => {
           if (node.type === 'directory') {
             setIsExpanded(!isExpanded);
@@ -56,20 +90,33 @@ function TreeNode({
             onFileSelect(node.path);
           }
         }}
-        whileHover={{ x: 2 }}
-        transition={{ duration: 0.15 }}
+        onMouseEnter={(e) => {
+          if (!isActive) {
+            e.currentTarget.style.backgroundColor = isDirectory
+              ? 'hsl(225, 15%, 16%, 0.5)'
+              : 'hsl(225, 15%, 16%, 0.3)';
+            e.currentTarget.style.color = 'hsl(210, 40%, 92%)';
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!isActive) {
+            e.currentTarget.style.backgroundColor = 'transparent';
+            e.currentTarget.style.color = isDirectory
+              ? 'hsl(210, 20%, 70%)'
+              : 'hsl(215, 15%, 55%)';
+          }
+        }}
       >
         {node.type === 'directory' && (
           <motion.div
             animate={{ rotate: isExpanded ? 90 : 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.15 }}
           >
-            <ChevronRight className="w-3 h-3 text-muted-foreground" />
+            <ChevronRight className="w-3 h-3" style={{ color: 'hsl(215, 15%, 55%)' }} />
           </motion.div>
         )}
-        {node.type === 'file' && <div className="w-3" />}
         {getIcon()}
-        <span className="text-sm text-foreground">{node.name}</span>
+        <span className="truncate">{node.name}</span>
       </motion.div>
 
       <AnimatePresence>
@@ -114,30 +161,13 @@ export function FileTree({
         width: isCollapsed ? 48 : 256
       }}
       transition={{ duration: 0.3, ease: 'easeOut' }}
-      className="h-full glass-panel border-r border-border overflow-hidden"
+      className="h-full overflow-hidden border-r select-none relative"
+      style={{
+        backgroundColor: 'rgba(18, 23, 35, 0.6)',
+        backdropFilter: 'blur(16px) saturate(1.2)',
+        borderRightColor: 'hsl(225, 15%, 18%)',
+      }}
     >
-      {/* Toggle Button */}
-      <div className="h-12 border-b border-border flex items-center justify-between px-2">
-        {!isCollapsed && (
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2">
-            Files
-          </h3>
-        )}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onToggleCollapse}
-          className="h-8 w-8 hover:bg-secondary"
-          title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          {isCollapsed ? (
-            <PanelLeft className="w-4 h-4" />
-          ) : (
-            <PanelLeftClose className="w-4 h-4" />
-          )}
-        </Button>
-      </div>
-
       {/* File Tree Content */}
       <AnimatePresence>
         {!isCollapsed && (
@@ -146,8 +176,7 @@ export function FileTree({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="p-2 overflow-y-auto"
-            style={{ height: 'calc(100% - 48px)' }}
+            className="overflow-y-auto py-2 h-full"
           >
             {nodes.map((node, index) => (
               <TreeNode
@@ -161,6 +190,26 @@ export function FileTree({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Floating Toggle Button */}
+      <div className="absolute top-2 right-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onToggleCollapse}
+          className="h-8 w-8 hover:bg-secondary/80 backdrop-blur-sm"
+          style={{
+            backgroundColor: 'rgba(18, 23, 35, 0.8)',
+          }}
+          title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {isCollapsed ? (
+            <PanelLeft className="w-4 h-4" />
+          ) : (
+            <PanelLeftClose className="w-4 h-4" />
+          )}
+        </Button>
+      </div>
     </motion.div>
   );
 }

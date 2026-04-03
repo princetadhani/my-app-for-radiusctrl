@@ -2,9 +2,10 @@
 
 import { useEffect, useState, useRef } from 'react';
 import Editor from '@monaco-editor/react';
-import { Save, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { getFileContent, saveFile } from '@/lib/api';
 import { toast } from 'sonner';
+import { EditorTopBar } from '@/components/editor-top-bar';
 
 interface EditorPanelProps {
   filePath: string;
@@ -98,32 +99,34 @@ export function EditorPanel({ filePath, onConflict }: EditorPanelProps) {
   console.log('Rendering editor with content length:', content.length);
   console.log('Content preview:', content.substring(0, 200));
 
+  const handleCopyPath = () => {
+    navigator.clipboard.writeText(filePath);
+    toast.success('File path copied to clipboard');
+  };
+
+  const handleReset = () => {
+    if (confirm('Are you sure you want to reset all changes?')) {
+      // Reload file content
+      getFileContent(filePath).then(data => {
+        setContent(data.content);
+        setIsModified(false);
+        toast.success('Changes reset');
+      });
+    }
+  };
+
   return (
     <div className="h-full w-full flex flex-col bg-card">
-      {/* Toolbar */}
-      <div className="h-10 flex-shrink-0 border-b border-border flex items-center justify-between px-4 bg-secondary/30">
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-mono text-foreground">
-            {filePath.split('/').pop()}
-          </span>
-          {isModified && (
-            <span className="text-xs text-neon-amber">● Modified</span>
-          )}
-        </div>
-        <button
-          onClick={() => handleSaveFile()}
-          disabled={!isModified || isSaving}
-          className="flex items-center gap-2 px-3 py-1 rounded bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-sm transition-colors"
-        >
-          {isSaving ? (
-            <Loader2 className="w-3 h-3 animate-spin" />
-          ) : (
-            <Save className="w-3 h-3" />
-          )}
-          <span>Save</span>
-          <span className="text-xs opacity-70">(Ctrl+S)</span>
-        </button>
-      </div>
+      {/* Editor Top Bar */}
+      <EditorTopBar
+        filePath={filePath}
+        fileName={filePath.split('/').pop()}
+        isModified={isModified}
+        onCopy={handleCopyPath}
+        onReset={handleReset}
+        onSave={handleSaveFile}
+        isSaving={isSaving}
+      />
 
       {/* Monaco Editor */}
       <div className="flex-1 relative bg-[#1e1e1e] min-h-0">
