@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Pause, Trash2, Download, FileText, Activity, PanelLeftClose, PanelLeft } from 'lucide-react';
+import { Play, Pause, Trash2, Download, FileText, Activity, PanelLeftClose, PanelLeft, ArrowDown } from 'lucide-react';
 import { StatusHeader } from '@/components/status-header';
 import { Button } from '@/components/ui/button';
 import { readLogs, getSocket, type LogEntry } from '@/lib/api';
@@ -12,15 +12,21 @@ export default function LogsPage() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [isConsoleOpen, setIsConsoleOpen] = useState(true);
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const consoleRef = useRef<HTMLDivElement>(null);
 
-  // Load initial logs
+  // Load initial logs and scroll to bottom
   useEffect(() => {
     const loadLogs = async () => {
       try {
         const initialLogs = await readLogs(100);
         setLogs(initialLogs);
+        // Scroll to bottom after logs are loaded
+        setTimeout(() => {
+          if (consoleRef.current) {
+            consoleRef.current.scrollTop = consoleRef.current.scrollHeight;
+          }
+        }, 100);
       } catch (error) {
         console.error('Error loading logs:', error);
         toast.error('Failed to load logs');
@@ -45,12 +51,30 @@ export default function LogsPage() {
     };
   }, [isStreaming]);
 
+  // Auto-scroll to bottom when streaming
   useEffect(() => {
-    // Auto-scroll to bottom
     if (consoleRef.current && isStreaming) {
       consoleRef.current.scrollTop = consoleRef.current.scrollHeight;
     }
   }, [logs, isStreaming]);
+
+  // Detect scroll position to show/hide "Jump to Bottom" button
+  useEffect(() => {
+    const handleScroll = () => {
+      if (consoleRef.current) {
+        const { scrollTop, scrollHeight, clientHeight } = consoleRef.current;
+        // Show button if user is scrolled up more than 100px from bottom
+        const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+        setShowScrollToBottom(!isNearBottom);
+      }
+    };
+
+    const consoleElement = consoleRef.current;
+    if (consoleElement) {
+      consoleElement.addEventListener('scroll', handleScroll);
+      return () => consoleElement.removeEventListener('scroll', handleScroll);
+    }
+  }, []);
 
   const handleClear = () => {
     setLogs([]);
@@ -67,6 +91,15 @@ export default function LogsPage() {
     a.download = `radius-logs-${Date.now()}.txt`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const scrollToBottom = () => {
+    if (consoleRef.current) {
+      consoleRef.current.scrollTo({
+        top: consoleRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
   };
 
   const getLevelClass = (level: LogEntry['level']) => {
@@ -107,7 +140,7 @@ export default function LogsPage() {
           className="h-full glass-panel border-r border-border overflow-hidden"
         >
           {/* Toggle Button */}
-          <div className="h-10 border-b border-border flex items-center justify-between px-2">
+          <div className="h-12 border-b border-border flex items-center justify-between px-2">
             {!isSidebarCollapsed && (
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2">
                 Log Info
@@ -137,7 +170,7 @@ export default function LogsPage() {
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
                 className="p-4 space-y-6 overflow-y-auto"
-                style={{ height: 'calc(100% - 40px)' }}
+                style={{ height: 'calc(100% - 48px)' }}
               >
                 {/* Stream Status */}
                 <div className="space-y-2">
@@ -251,41 +284,99 @@ export default function LogsPage() {
                 ))
               )}
             </div>
+
+            {/* Floating "Jump to Bottom" Button */}
+            <AnimatePresence>
+              {showScrollToBottom && (
+                <motion.button
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  transition={{ duration: 0.2 }}
+                  onClick={scrollToBottom}
+                  className="absolute bottom-16 right-6 flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all shadow-lg z-10 group"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(122, 162, 247, 0.9), rgba(187, 154, 247, 0.9))',
+                    border: '1px solid rgba(122, 162, 247, 0.5)',
+                    color: '#ffffff',
+                    boxShadow: '0 4px 12px rgba(122, 162, 247, 0.4)',
+                  }}
+                  title="Jump to bottom"
+                >
+                  <ArrowDown className="w-3.5 h-3.5" />
+                  <span>Bottom</span>
+                </motion.button>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Bottom Console - Controls */}
           <div className="relative">
-            <div className="h-10 border-t border-border glass-panel flex items-center justify-between px-4">
+            <div className="flex items-center justify-between px-4 py-2 bg-card/50 border-b border-border">
               <div className="flex items-center gap-3">
+                {/* Stream/Pause Button */}
                 <button
                   onClick={() => setIsStreaming(!isStreaming)}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded bg-secondary hover:bg-secondary/80 text-xs transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all relative overflow-hidden group"
+                  style={{
+                    background: isStreaming
+                      ? 'linear-gradient(135deg, rgba(158, 206, 106, 0.2), rgba(158, 206, 106, 0.15))'
+                      : 'linear-gradient(135deg, rgba(122, 162, 247, 0.15), rgba(187, 154, 247, 0.15))',
+                    border: isStreaming
+                      ? '1px solid rgba(158, 206, 106, 0.4)'
+                      : '1px solid rgba(122, 162, 247, 0.3)',
+                    color: isStreaming ? '#9ece6a' : '#7aa2f7',
+                    boxShadow: isStreaming ? '0 0 12px rgba(158, 206, 106, 0.3)' : 'none',
+                  }}
                 >
+                  <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
                   {isStreaming ? (
                     <>
-                      <Pause className="w-3 h-3" />
-                      <span>Pause</span>
+                      <Pause className="w-3.5 h-3.5 relative z-10" />
+                      <span className="relative z-10">Pause</span>
                     </>
                   ) : (
                     <>
-                      <Play className="w-3 h-3" />
-                      <span>Stream</span>
+                      <Play className="w-3.5 h-3.5 relative z-10" />
+                      <span className="relative z-10">Stream</span>
                     </>
                   )}
                 </button>
+
+                {/* Clear Button */}
                 <button
                   onClick={handleClear}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded bg-secondary hover:bg-secondary/80 text-xs transition-colors"
+                  disabled={logs.length === 0}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all relative overflow-hidden group disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={{
+                    background: logs.length > 0 ? 'rgba(237, 135, 150, 0.15)' : 'rgba(139, 148, 158, 0.1)',
+                    border: logs.length > 0 ? '1px solid rgba(237, 135, 150, 0.3)' : '1px solid rgba(139, 148, 158, 0.2)',
+                    color: logs.length > 0 ? '#ed8796' : '#8b949e',
+                  }}
                 >
-                  <Trash2 className="w-3 h-3" />
-                  <span>Clear</span>
+                  <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                  <Trash2 className="w-3.5 h-3.5 relative z-10" />
+                  <span className="relative z-10">Clear</span>
                 </button>
+
+                {/* Download Button */}
                 <button
                   onClick={handleDownload}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded bg-secondary hover:bg-secondary/80 text-xs transition-colors"
+                  disabled={logs.length === 0}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all relative overflow-hidden group disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={{
+                    background: logs.length > 0
+                      ? 'linear-gradient(135deg, rgba(122, 162, 247, 0.15), rgba(187, 154, 247, 0.15))'
+                      : 'rgba(139, 148, 158, 0.1)',
+                    border: logs.length > 0
+                      ? '1px solid rgba(122, 162, 247, 0.3)'
+                      : '1px solid rgba(139, 148, 158, 0.2)',
+                    color: logs.length > 0 ? '#7aa2f7' : '#8b949e',
+                  }}
                 >
-                  <Download className="w-3 h-3" />
-                  <span>Download</span>
+                  <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                  <Download className="w-3.5 h-3.5 relative z-10" />
+                  <span className="relative z-10">Download</span>
                 </button>
               </div>
               <div className="text-xs text-muted-foreground">
