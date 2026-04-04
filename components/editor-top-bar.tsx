@@ -152,38 +152,30 @@ export function EditorTopBar({
           <RotateCcw className="w-3.5 h-3.5" />
         </button>
 
-        {/* Save Button */}
+        {/* Save Button - Matching COA page style */}
         <button
           onClick={onSave}
           disabled={!isModified || isSaving}
-          className="flex items-center gap-1.5 rounded transition-all duration-200 text-xs font-medium"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all relative overflow-hidden group"
           style={{
-            padding: '4px 10px',
-            fontFamily: 'var(--font-inter)',
-            backgroundColor: isModified && !isSaving
-              ? 'hsl(210, 100%, 60%)'
-              : 'hsl(225, 15%, 16%)',
-            color: isModified && !isSaving
-              ? 'hsl(225, 25%, 6%)'
-              : 'hsl(215, 15%, 55%)',
+            background: isModified && !isSaving
+              ? 'linear-gradient(135deg, rgba(158, 206, 106, 0.2), rgba(158, 206, 106, 0.15))'
+              : 'rgba(139, 148, 158, 0.1)',
+            border: isModified && !isSaving
+              ? '1px solid rgba(158, 206, 106, 0.4)'
+              : '1px solid rgba(139, 148, 158, 0.2)',
+            color: isModified && !isSaving ? '#9ece6a' : '#8b949e',
+            boxShadow: isModified && !isSaving ? '0 0 12px rgba(158, 206, 106, 0.3)' : 'none',
             cursor: isModified && !isSaving ? 'pointer' : 'not-allowed',
-            boxShadow: isModified && !isSaving
-              ? '0 0 20px hsl(210, 100%, 60%, 0.3)'
-              : 'none',
-          }}
-          onMouseEnter={(e) => {
-            if (isModified && !isSaving) {
-              e.currentTarget.style.opacity = '0.9';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (isModified && !isSaving) {
-              e.currentTarget.style.opacity = '1';
-            }
+            opacity: !isModified || isSaving ? 0.4 : 1,
           }}
         >
-          <Save className="w-3 h-3" />
-          <span>{isSaving ? 'Saving...' : 'Save'}</span>
+          {/* Shimmer effect */}
+          {isModified && !isSaving && (
+            <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+          )}
+          <Save className="w-3.5 h-3.5 relative z-10" />
+          <span className="relative z-10">{isSaving ? 'Saving...' : 'Save'}</span>
         </button>
       </div>
     </motion.div>

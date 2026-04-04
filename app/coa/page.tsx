@@ -1,440 +1,441 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Plus, Trash2, FileText, Save, Terminal, ChevronUp, ChevronDown, PanelLeftClose, PanelLeft } from 'lucide-react';
+import { Plus, Trash2, Save } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 import { StatusHeader } from '@/components/status-header';
-import { Button } from '@/components/ui/button';
+import { FileTree } from '@/components/file-tree';
+import { CoaConsole, type CoaConsoleHandle } from '@/components/coa-console';
+import { CustomDialog } from '@/components/custom-dialog';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { toast } from 'sonner';
-import { executeCoaCommand, listCoaFiles, getCoaFileContent, createCoaFile, deleteCoaFile } from '@/lib/api';
+import {
+    executeCoaCommand,
+    getCoaFileTree,
+    getCoaFileContent,
+    createCoaFile,
+    deleteCoaFile,
+    type FileNode
+} from '@/lib/api';
 
-interface CoaTemplate {
-  id: string;
-  name: string;
-  type: 'coa' | 'disconnect';
-  nasIp: string;
-  nasSecret: string;
-  attributes: string;
-}
+// LocalStorage keys
+const STORAGE_KEYS = {
+    NAS_IP: 'coa_nas_ip',
+    NAS_SECRET: 'coa_nas_secret',
+    REQUEST_TYPE: 'coa_request_type',
+};
 
 export default function CoaPage() {
-  const [templates, setTemplates] = useState<CoaTemplate[]>([]);
-  const [selectedTemplate, setSelectedTemplate] = useState<CoaTemplate | null>(null);
-  const [requestType, setRequestType] = useState<'coa' | 'disconnect'>('disconnect');
-  const [nasIp, setNasIp] = useState('192.168.1.1');
-  const [nasSecret, setNasSecret] = useState('testing123');
-  const [attributes, setAttributes] = useState('User-Name = "testuser"\nFramed-IP-Address = "192.168.1.100"');
-  const [response, setResponse] = useState('');
-  const [isSending, setIsSending] = useState(false);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [isConsoleOpen, setIsConsoleOpen] = useState(false);
-  const [isModified, setIsModified] = useState(false);
-  const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
-  const consoleRef = useRef<HTMLDivElement>(null);
-  const editorRef = useRef<any>(null);
+    // File tree state
+    const [fileTree, setFileTree] = useState<FileNode[]>([]);
+    const [selectedFile, setSelectedFile] = useState<string>('');
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
-  // Load COA templates from backend
-  useEffect(() => {
-    const loadTemplates = async () => {
-      setIsLoadingTemplates(true);
-      try {
-        const files = await listCoaFiles();
-        console.log('COA files from backend:', files);
+    // Editor state
+    const [attributes, setAttributes] = useState('User-Name = "testuser"\nFramed-IP-Address = "192.168.1.100"');
+    const [isModified, setIsModified] = useState(false);
+    const editorRef = useRef<any>(null);
 
-        // Check if files is an array
-        if (!Array.isArray(files)) {
-          console.warn('Backend returned non-array:', files);
-          setIsLoadingTemplates(false);
-          return;
+    // COA request state - Initialize with defaults first (to avoid hydration mismatch)
+    const [requestType, setRequestType] = useState<'coa' | 'disconnect'>('disconnect');
+    const [nasIp, setNasIp] = useState('192.168.1.1');
+    const [nasSecret, setNasSecret] = useState('testing123');
+
+    // Console ref
+    const consoleRef = useRef<CoaConsoleHandle>(null);
+
+    // Dialog state
+    const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+    // Load from localStorage after hydration (client-side only)
+    useEffect(() => {
+        // Load saved values from localStorage
+        const savedRequestType = localStorage.getItem(STORAGE_KEYS.REQUEST_TYPE);
+        const savedNasIp = localStorage.getItem(STORAGE_KEYS.NAS_IP);
+        const savedNasSecret = localStorage.getItem(STORAGE_KEYS.NAS_SECRET);
+
+        if (savedRequestType) {
+            setRequestType(savedRequestType as 'coa' | 'disconnect');
         }
+        if (savedNasIp) {
+            setNasIp(savedNasIp);
+        }
+        if (savedNasSecret) {
+            setNasSecret(savedNasSecret);
+        }
+    }, []);
 
-        // Convert backend files to template format
-        const loadedTemplates: CoaTemplate[] = await Promise.all(
-          files.map(async (file: any) => {
+    // Load COA file tree on mount
+    useEffect(() => {
+        const loadFileTree = async () => {
             try {
-              // Handle both string and object formats
-              const fileName = typeof file === 'string' ? file : (file.name || file.filename);
-
-              if (!fileName) {
-                console.warn('File entry has no name:', file);
-                return null;
-              }
-
-              const content = await getCoaFileContent(fileName);
-
-              // Parse the file content to extract type, nasIp, etc.
-              // For now, just create a basic template
-              return {
-                id: fileName,
-                name: fileName.replace('.txt', '').replace('.coa', '').replace(/_/g, ' '),
-                type: fileName.includes('disconnect') ? 'disconnect' : 'coa',
-                nasIp: '192.168.1.1', // Default, can be parsed from file
-                nasSecret: 'testing123', // Default, can be parsed from file
-                attributes: content,
-              };
+                const tree = await getCoaFileTree();
+                setFileTree(tree);
             } catch (error) {
-              console.error(`Failed to load template:`, error);
-              return null;
+                console.error('Failed to load COA file tree:', error);
+                toast.error('Failed to load COA files');
             }
-          })
-        );
+        };
 
-        setTemplates(loadedTemplates.filter(t => t !== null) as CoaTemplate[]);
-      } catch (error) {
-        console.error('Failed to load COA templates:', error);
-        toast.error('Failed to load COA templates');
-      } finally {
-        setIsLoadingTemplates(false);
-      }
+        loadFileTree();
+    }, []);
+
+    // Save settings to localStorage when they change
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            localStorage.setItem(STORAGE_KEYS.NAS_IP, nasIp);
+        }
+    }, [nasIp]);
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            localStorage.setItem(STORAGE_KEYS.NAS_SECRET, nasSecret);
+        }
+    }, [nasSecret]);
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            localStorage.setItem(STORAGE_KEYS.REQUEST_TYPE, requestType);
+        }
+    }, [requestType]);
+
+
+
+    // Handle file selection
+    const handleFileSelect = async (path: string) => {
+        try {
+            setSelectedFile(path);
+            // Extract filename from full path
+            const fileName = path.split('/').pop() || '';
+            const content = await getCoaFileContent(fileName);
+            setAttributes(content);
+            setIsModified(false);
+        } catch (error) {
+            console.error('Failed to load file:', error);
+            toast.error('Failed to load file content');
+        }
     };
 
-    loadTemplates();
-  }, []);
+    // Handle editor changes
+    const handleEditorChange = (value: string | undefined) => {
+        setAttributes(value || '');
+        setIsModified(true);
+    };
 
-  useEffect(() => {
-    if (consoleRef.current) {
-      consoleRef.current.scrollTop = consoleRef.current.scrollHeight;
-    }
-  }, [response]);
+    const handleEditorDidMount = (editor: any, monaco: any) => {
+        editorRef.current = editor;
 
-  const handleSend = async () => {
-    setIsConsoleOpen(true);
-    setIsSending(true);
-    setResponse(`$ radclient -f <file> -x -r 1 ${nasIp} ${requestType} ${nasSecret}\n`);
-    setResponse(prev => prev + `Connecting to NAS ${nasIp}:3799...\n`);
-    setResponse(prev => prev + `Sending ${requestType.toUpperCase()} request...\n\n`);
+        // Add Cmd+S / Ctrl+S keyboard shortcut to save
+        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+            if (selectedFile && isModified) {
+                handleSaveFile();
+            }
+        });
 
-    try {
-      const result = await executeCoaCommand({
-        type: requestType,
-        nasIp,
-        nasSecret,
-        attributes,
-      });
+        // Define custom theme matching dark navy blue
+        monaco.editor.defineTheme('radius-theme', {
+            base: 'vs-dark',
+            inherit: true,
+            rules: [
+                { token: 'comment', foreground: '6A9955', fontStyle: 'italic' },
+                { token: 'string', foreground: '9CDCFE' },
+                { token: 'number', foreground: 'B5CEA8' },
+            ],
+            colors: {
+                'editor.background': '#0d1117',
+                'editor.lineHighlightBackground': '#161b22',
+                'editorLineNumber.foreground': '#8b949e',
+                'editor.selectionBackground': '#1f6feb40',
+            },
+        });
+        monaco.editor.setTheme('radius-theme');
+    };
 
-      setResponse(prev => prev + result.output + '\n');
+    // Save file
+    const handleSaveFile = async () => {
+        if (!selectedFile) {
+            toast.error('No file selected');
+            return;
+        }
 
-      if (result.success) {
-        toast.success('COA request sent successfully');
-      } else {
-        toast.error('COA request failed');
-      }
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      setResponse(prev => prev + `\n✗ Error: ${errorMsg}\n`);
-      toast.error('Failed to send COA request');
-    } finally {
-      setIsSending(false);
-    }
-  };
+        try {
+            const fileName = selectedFile.split('/').pop() || '';
+            await createCoaFile(fileName, attributes);
+            setIsModified(false);
+            toast.success('File saved successfully');
+        } catch (error) {
+            console.error('Failed to save file:', error);
+            toast.error('Failed to save file');
+        }
+    };
 
-  const handleAddTemplate = async () => {
-    const templateName = prompt('Enter template name:');
-    if (!templateName) return;
+    // Create new file
+    const handleCreateFile = async (fileName: string) => {
+        try {
+            const fullFileName = fileName.endsWith('.txt') ? fileName : `${fileName}.txt`;
+            await createCoaFile(fullFileName, attributes);
 
-    try {
-      const fileName = `${templateName.replace(/\s+/g, '_')}.txt`;
+            // Reload file tree
+            const tree = await getCoaFileTree();
+            setFileTree(tree);
 
-      await createCoaFile(fileName, attributes);
+            // Auto-load the created file
+            const coaDir = '/etc/freeradius/3.0/coa';
+            const newFilePath = `${coaDir}/${fullFileName}`;
+            setSelectedFile(newFilePath);
+            setIsModified(false);
 
-      const newTemplate: CoaTemplate = {
-        id: fileName,
-        name: templateName,
-        type: requestType,
-        nasIp,
-        nasSecret,
-        attributes,
-      };
+            toast.success('File created successfully');
+        } catch (error) {
+            console.error('Failed to create file:', error);
+            toast.error('Failed to create file');
+        }
+    };
 
-      setTemplates([...templates, newTemplate]);
-      setIsModified(false);
-      toast.success('Template saved successfully');
-    } catch (error) {
-      console.error('Failed to save template:', error);
-      toast.error('Failed to save template');
-    }
-  };
+    // Delete file
+    const handleDeleteFile = async () => {
+        if (!selectedFile) {
+            toast.error('No file selected');
+            return;
+        }
 
-  const handleDeleteTemplate = async (id: string) => {
-    try {
-      await deleteCoaFile(id);
-      setTemplates(templates.filter(t => t.id !== id));
-      if (selectedTemplate?.id === id) {
-        setSelectedTemplate(null);
-        setAttributes('');
-      }
-      toast.success('Template deleted successfully');
-    } catch (error) {
-      console.error('Failed to delete template:', error);
-      toast.error('Failed to delete template');
-    }
-  };
+        const fileName = selectedFile.split('/').pop() || '';
 
-  const handleSelectTemplate = (template: CoaTemplate) => {
-    setSelectedTemplate(template);
-    setRequestType(template.type);
-    setNasIp(template.nasIp);
-    setNasSecret(template.nasSecret);
-    setAttributes(template.attributes);
-    setIsModified(false);
-  };
+        try {
+            await deleteCoaFile(fileName);
 
-  const handleEditorChange = (value: string | undefined) => {
-    setAttributes(value || '');
-    setIsModified(true);
-  };
+            // Reload file tree
+            const tree = await getCoaFileTree();
+            setFileTree(tree);
 
-  const handleEditorDidMount = (editor: any) => {
-    editorRef.current = editor;
-  };
+            setSelectedFile('');
+            setAttributes('');
+            setIsDeleteDialogOpen(false);
+            toast.success('File deleted successfully');
+        } catch (error) {
+            console.error('Failed to delete file:', error);
+            toast.error('Failed to delete file');
+        }
+    };
 
-  return (
-    <div className="h-screen flex flex-col">
-      {/* Header */}
-      <StatusHeader currentFile={selectedTemplate ? `coa/${selectedTemplate.name.toLowerCase().replace(/\s+/g, '-')}.conf` : undefined} />
+    // Send COA command
+    const handleSend = async (): Promise<{ success: boolean; output: string }> => {
+        if (!selectedFile) {
+            toast.error('Please select a COA file first');
+            return { success: false, output: '' };
+        }
 
-      {/* Main Content - 3 Panel IDE Layout */}
-      <div className="flex-1 flex pt-12 overflow-hidden">
-        {/* Sidebar - Template File Tree */}
-        <motion.div
-          initial={{ x: -280, opacity: 0 }}
-          animate={{
-            x: 0,
-            opacity: 1,
-            width: isSidebarCollapsed ? 48 : 256
-          }}
-          transition={{ duration: 0.3, ease: 'easeOut' }}
-          className="h-full glass-panel border-r border-border overflow-hidden"
-        >
-          {/* Toggle Button */}
-          <div className="h-12 border-b border-border flex items-center justify-between px-2">
-            {!isSidebarCollapsed && (
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2">
-                Templates
-              </h3>
-            )}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-              className="h-8 w-8 hover:bg-secondary"
-              title={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            >
-              {isSidebarCollapsed ? (
-                <PanelLeft className="w-4 h-4" />
-              ) : (
-                <PanelLeftClose className="w-4 h-4" />
-              )}
-            </Button>
-          </div>
+        if (!consoleRef.current) {
+            return { success: false, output: '' };
+        }
 
-          {/* Sidebar Content */}
-          <AnimatePresence>
-            {!isSidebarCollapsed && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="p-2 overflow-y-auto"
-                style={{ height: 'calc(100% - 48px)' }}
-              >
-                {/* Add Template Button */}
-                <motion.button
-                  onClick={handleAddTemplate}
-                  whileHover={{ x: 2 }}
-                  transition={{ duration: 0.15 }}
-                  className="w-full flex items-center gap-2 px-2 py-1.5 mb-2 rounded bg-neon-green/20 hover:bg-neon-green/30 border border-neon-green/40 text-neon-green text-sm transition-colors"
-                >
-                  <Plus className="w-3 h-3" />
-                  <span>New Template</span>
-                </motion.button>
+        const fileName = selectedFile.split('/').pop() || '';
+        const fullPath = `/etc/freeradius/3.0/coa/${fileName}`;
 
-                {/* Template List */}
-                <div className="space-y-1">
-                  {templates.map(template => (
-                    <motion.div
-                      key={template.id}
-                      whileHover={{ x: 2 }}
-                      transition={{ duration: 0.15 }}
-                      className={`flex items-center justify-between px-2 py-1.5 rounded cursor-pointer transition-colors ${selectedTemplate?.id === template.id
-                        ? 'bg-primary/10 border-l-2 border-primary'
-                        : 'hover:bg-secondary/50'
-                        }`}
-                      onClick={() => handleSelectTemplate(template)}
-                    >
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <FileText className="w-4 h-4 text-primary flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm text-foreground truncate">{template.name}</div>
-                          <div className="text-[10px] text-muted-foreground uppercase">{template.type}</div>
-                        </div>
-                      </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteTemplate(template.id);
+        // Show command
+        await consoleRef.current.addLine(`$ sudo radclient -f ${fullPath} -x -r 1 ${nasIp} ${requestType} ${nasSecret}`, 'cmd', 0);
+        await consoleRef.current.addLine(`Connecting to NAS ${nasIp}:3799...`, 'info', 300);
+        await consoleRef.current.addLine(`Sending ${requestType.toUpperCase()} request...`, 'info', 200);
+
+        try {
+            const result = await executeCoaCommand({
+                type: requestType,
+                nasIp,
+                nasSecret,
+                attributes,
+                fileName,
+            });
+
+            // Parse and display output
+            const outputLines = result.output.split('\n').filter(line => line.trim());
+            for (const line of outputLines) {
+                const lineType = line.includes('error') || line.includes('failed') ? 'error' : 'info';
+                await consoleRef.current.addLine(line, lineType, 100);
+            }
+
+            if (result.success) {
+                await consoleRef.current.addLine('✓ COA request sent successfully', 'final-success', 400);
+                toast.success('COA request sent successfully');
+            } else {
+                await consoleRef.current.addLine('✗ COA request failed', 'final-error', 300);
+                toast.error('COA request failed');
+            }
+
+            return result;
+        } catch (error) {
+            const errorMsg = error instanceof Error ? error.message : String(error);
+            await consoleRef.current.addLine(`✗ Error: ${errorMsg}`, 'final-error', 100);
+            toast.error('Failed to send COA request');
+            return { success: false, output: '' };
+        }
+    };
+
+
+
+    return (
+        <div className="h-screen flex flex-col overflow-hidden">
+            {/* Header */}
+            <StatusHeader currentFile={selectedFile} />
+
+            {/* Main Content */}
+            <div className="flex-1 flex overflow-hidden" style={{ paddingTop: '3rem' }}>
+                {/* Sidebar - File Tree */}
+                <FileTree
+                    nodes={fileTree}
+                    activeFile={selectedFile}
+                    onFileSelect={handleFileSelect}
+                    isCollapsed={isSidebarCollapsed}
+                    onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                />
+
+                {/* Editor Area */}
+                <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+                    {/* Top Toolbar */}
+                    <div
+                        className="h-10 border-b flex items-center justify-between px-4"
+                        style={{
+                            backgroundColor: 'rgba(18, 23, 35, 0.6)',
+                            backdropFilter: 'blur(16px) saturate(1.2)',
+                            borderBottomColor: 'hsl(225, 15%, 18%)',
                         }}
-                        className="p-1 hover:bg-destructive/20 rounded transition-colors"
-                      >
-                        <Trash2 className="w-3 h-3 text-muted-foreground hover:text-destructive" />
-                      </button>
-                    </motion.div>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
+                    >
+                        <div className="flex items-center gap-3">
+                            <span className="text-sm font-mono" style={{ color: '#c9d1d9' }}>
+                                {selectedFile ? selectedFile.split('/').pop() : 'No file selected'}
+                            </span>
+                            {isModified && (
+                                <span className="text-xs" style={{ color: '#ff9e64' }}>● Modified</span>
+                            )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                            {/* New Button */}
+                            <button
+                                onClick={() => setIsCreateDialogOpen(true)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all relative overflow-hidden group"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(122, 162, 247, 0.15), rgba(187, 154, 247, 0.15))',
+                                    border: '1px solid rgba(122, 162, 247, 0.3)',
+                                    color: '#7aa2f7',
+                                }}
+                                title="Create new COA file (Ctrl+N)"
+                            >
+                                <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                                <Plus className="w-3.5 h-3.5 relative z-10" />
+                                <span className="relative z-10">New</span>
+                            </button>
 
-        {/* Center Panel - Monaco Editor */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="flex-1 flex flex-col bg-card overflow-hidden">
-            {/* Toolbar */}
-            <div className="h-10 border-b border-border flex items-center justify-between px-4 bg-secondary/30">
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-mono text-foreground">
-                  {selectedTemplate ? selectedTemplate.name : 'CoA Configuration'}
-                </span>
-                {isModified && (
-                  <span className="text-xs text-neon-amber">● Modified</span>
-                )}
-              </div>
-              <button
-                onClick={handleAddTemplate}
-                disabled={!isModified}
-                className="flex items-center gap-2 px-3 py-1 rounded bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-sm transition-colors"
-              >
-                <Save className="w-3 h-3" />
-                <span>Save Template</span>
-              </button>
-            </div>
+                            {/* Delete Button */}
+                            <button
+                                onClick={() => setIsDeleteDialogOpen(true)}
+                                disabled={!selectedFile}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all relative overflow-hidden group disabled:opacity-40 disabled:cursor-not-allowed"
+                                style={{
+                                    background: selectedFile ? 'rgba(237, 135, 150, 0.15)' : 'rgba(139, 148, 158, 0.1)',
+                                    border: selectedFile ? '1px solid rgba(237, 135, 150, 0.3)' : '1px solid rgba(139, 148, 158, 0.2)',
+                                    color: selectedFile ? '#ed8796' : '#8b949e',
+                                }}
+                                title="Delete selected file (Del)"
+                            >
+                                <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                                <Trash2 className="w-3.5 h-3.5 relative z-10" />
+                                <span className="relative z-10">Delete</span>
+                            </button>
 
-            {/* Monaco Editor */}
-            <div className="flex-1">
-              <Editor
-                height="100%"
-                language="ini"
-                value={attributes}
-                onChange={handleEditorChange}
-                onMount={handleEditorDidMount}
-                theme="vs-dark"
-                loading={<div className="flex items-center justify-center h-full text-muted-foreground">Loading editor...</div>}
-                options={{
-                  minimap: { enabled: false },
-                  fontSize: 13,
-                  lineNumbers: 'on',
-                  renderWhitespace: 'selection',
-                  scrollBeyondLastLine: false,
-                  automaticLayout: true,
-                  tabSize: 2,
-                  wordWrap: 'off',
-                  fontFamily: 'JetBrains Mono, Consolas, Monaco, monospace',
-                }}
-              />
-            </div>
-          </div>
+                            {/* Save Button */}
+                            <button
+                                onClick={handleSaveFile}
+                                disabled={!isModified || !selectedFile}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all relative overflow-hidden group disabled:opacity-40 disabled:cursor-not-allowed"
+                                style={{
+                                    background: isModified && selectedFile
+                                        ? 'linear-gradient(135deg, rgba(158, 206, 106, 0.2), rgba(158, 206, 106, 0.15))'
+                                        : 'rgba(139, 148, 158, 0.1)',
+                                    border: isModified && selectedFile
+                                        ? '1px solid rgba(158, 206, 106, 0.4)'
+                                        : '1px solid rgba(139, 148, 158, 0.2)',
+                                    color: isModified && selectedFile ? '#9ece6a' : '#8b949e',
+                                    boxShadow: isModified && selectedFile ? '0 0 12px rgba(158, 206, 106, 0.3)' : 'none',
+                                }}
+                                title="Save file (Cmd+S / Ctrl+S)"
+                            >
+                                <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                                <Save className="w-3.5 h-3.5 relative z-10" />
+                                <span className="relative z-10">Save</span>
+                            </button>
+                        </div>
+                    </div>
 
-          {/* Bottom Console - CoA Controls */}
-          <div className="relative">
-            {/* Toggle Bar */}
-            <div className="h-10 border-t border-border glass-panel flex items-center justify-between px-4">
-              <button
-                onClick={() => setIsConsoleOpen(!isConsoleOpen)}
-                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <Terminal className="w-4 h-4" />
-                <span>CoA Console</span>
-                {isConsoleOpen ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
-              </button>
+                    {/* Monaco Editor */}
+                    <div className="flex-1 min-h-0 overflow-hidden" style={{ backgroundColor: '#0d1117' }}>
+                        <Editor
+                            height="100%"
+                            language="ini"
+                            value={attributes}
+                            onChange={handleEditorChange}
+                            onMount={handleEditorDidMount}
+                            theme="radius-theme"
+                            loading={
+                                <div className="flex items-center justify-center h-full text-muted-foreground">
+                                    Loading editor...
+                                </div>
+                            }
+                            options={{
+                                minimap: { enabled: false },
+                                fontSize: 13,
+                                lineNumbers: 'on',
+                                renderWhitespace: 'selection',
+                                scrollBeyondLastLine: false,
+                                automaticLayout: true,
+                                tabSize: 2,
+                                wordWrap: 'off',
+                                fontFamily: 'JetBrains Mono, Consolas, Monaco, monospace',
+                                readOnly: !selectedFile,
+                            }}
+                        />
+                    </div>
 
-              <div className="flex items-center gap-3">
-                {/* Request Type Selector */}
-                <div className="flex items-center gap-2 text-xs">
-                  <label className="flex items-center gap-1.5 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="requestType"
-                      value="coa"
-                      checked={requestType === 'coa'}
-                      onChange={() => setRequestType('coa')}
-                      className="w-3 h-3"
+                    {/* COA Console */}
+                    <CoaConsole
+                        ref={consoleRef}
+                        nasIp={nasIp}
+                        nasSecret={nasSecret}
+                        requestType={requestType}
+                        selectedFileName={selectedFile ? selectedFile.split('/').pop() : undefined}
+                        onNasIpChange={setNasIp}
+                        onNasSecretChange={setNasSecret}
+                        onRequestTypeChange={setRequestType}
+                        onSend={handleSend}
+                        disabled={!selectedFile}
                     />
-                    <span>CoA</span>
-                  </label>
-                  <label className="flex items-center gap-1.5 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="requestType"
-                      value="disconnect"
-                      checked={requestType === 'disconnect'}
-                      onChange={() => setRequestType('disconnect')}
-                      className="w-3 h-3"
-                    />
-                    <span>Disconnect</span>
-                  </label>
                 </div>
-
-                {/* NAS IP Input */}
-                <input
-                  type="text"
-                  value={nasIp}
-                  onChange={(e) => setNasIp(e.target.value)}
-                  placeholder="NAS IP"
-                  className="w-32 px-2 py-1 text-xs bg-secondary border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-
-                {/* NAS Secret Input */}
-                <input
-                  type="password"
-                  value={nasSecret}
-                  onChange={(e) => setNasSecret(e.target.value)}
-                  placeholder="Secret"
-                  className="w-24 px-2 py-1 text-xs bg-secondary border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-
-                {/* Send Button */}
-                <Button
-                  onClick={handleSend}
-                  disabled={isSending}
-                  className="flex items-center gap-2 px-4 py-1.5 h-auto rounded bg-neon-green/20 hover:bg-neon-green/30 border border-neon-green/40 text-neon-green font-medium text-xs transition-colors neon-glow-green"
-                >
-                  <Send className="w-3 h-3" />
-                  <span>{isSending ? 'Sending...' : 'Send'}</span>
-                </Button>
-              </div>
             </div>
 
-            {/* Console Panel */}
-            <AnimatePresence>
-              {isConsoleOpen && (
-                <motion.div
-                  initial={{ height: 0 }}
-                  animate={{ height: 200 }}
-                  exit={{ height: 0 }}
-                  transition={{ duration: 0.25, ease: 'easeInOut' }}
-                  className="overflow-hidden border-t border-border"
-                >
-                  <div
-                    ref={consoleRef}
-                    className="h-full bg-card p-4 font-mono text-xs overflow-y-auto"
-                  >
-                    {response.length === 0 ? (
-                      <div className="text-muted-foreground">
-                        Configure NAS settings and click "Send" to transmit CoA/Disconnect request.
-                      </div>
-                    ) : (
-                      <div className="whitespace-pre-wrap">{response}</div>
-                    )}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+            {/* Create File Dialog */}
+            <CustomDialog
+                isOpen={isCreateDialogOpen}
+                onClose={() => setIsCreateDialogOpen(false)}
+                onConfirm={handleCreateFile}
+                title="Create New COA File"
+                description="Enter a name for your COA configuration file. The .txt extension will be added automatically."
+                placeholder="e.g. disconnect_user"
+                confirmText="Create"
+                cancelText="Cancel"
+            />
+
+            {/* Delete File Dialog */}
+            <ConfirmDialog
+                isOpen={isDeleteDialogOpen}
+                onClose={() => setIsDeleteDialogOpen(false)}
+                onConfirm={handleDeleteFile}
+                title="Delete COA File"
+                description={`Are you sure you want to delete "${selectedFile?.split('/').pop()}"? This action cannot be undone.`}
+                confirmText="Delete"
+                cancelText="Cancel"
+                variant="danger"
+            />
+
+
         </div>
-      </div>
-    </div>
-  );
+    );
 }
-

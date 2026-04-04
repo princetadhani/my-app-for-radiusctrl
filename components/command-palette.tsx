@@ -108,24 +108,49 @@ export function CommandPalette({ onFileSelect }: CommandPaletteProps) {
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
+          {/* Backdrop with blur */}
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50"
+            initial={{ opacity: 0, backdropFilter: 'blur(0px)' }}
+            animate={{ opacity: 1, backdropFilter: 'blur(8px)' }}
+            exit={{ opacity: 0, backdropFilter: 'blur(0px)' }}
+            className="fixed inset-0 z-50"
+            style={{ backgroundColor: 'rgba(0, 0, 0, 0.75)' }}
             onClick={() => setIsOpen(false)}
           />
 
-          {/* Modal */}
+          {/* Modal with animated gradient border */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.96, y: -20 }}
+            initial={{ opacity: 0, scale: 0.9, y: 30 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.96, y: -20 }}
-            transition={{ duration: 0.2 }}
+            exit={{ opacity: 0, scale: 0.9, y: 30 }}
+            transition={{ type: 'spring', duration: 0.5 }}
             className="fixed top-1/4 left-1/2 -translate-x-1/2 w-full max-w-lg z-50"
           >
-            <div className="glass-panel-strong border border-border rounded-lg shadow-2xl overflow-hidden">
+            {/* Animated gradient border glow */}
+            <motion.div
+              className="absolute -inset-0.5 rounded-xl opacity-75 blur-sm"
+              style={{
+                background: 'linear-gradient(45deg, #7aa2f7, #bb9af7, #9ece6a, #7aa2f7)',
+                backgroundSize: '300% 300%',
+              }}
+              animate={{
+                backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
+              }}
+              transition={{
+                duration: 3,
+                repeat: Infinity,
+                ease: 'linear',
+              }}
+            />
+
+            {/* Dialog content */}
+            <div
+              className="relative rounded-xl shadow-2xl overflow-hidden"
+              style={{
+                backgroundColor: '#0d1117',
+                border: '1px solid rgba(122, 162, 247, 0.3)',
+              }}
+            >
               {/* Search Input */}
               <div className="flex items-center gap-3 p-4 border-b border-border">
                 <Search className="w-5 h-5 text-muted-foreground" />

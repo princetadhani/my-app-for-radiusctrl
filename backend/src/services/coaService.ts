@@ -4,6 +4,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import config from '../config';
 import logger from '../utils/logger';
+import { getSafePath, isValidIpAddress, sanitizeFileName, isValidCoaRequestType } from '../utils/security';
 
 const execAsync = promisify(exec);
 
@@ -33,13 +34,14 @@ export async function createCoaFile(
     // Ensure COA directory exists
     await fs.mkdir(config.freeradius.coaDir, { recursive: true });
 
-    // Sanitize filename
-    const sanitizedName = fileName.replace(/[^a-zA-Z0-9_-]/g, '_');
+    // SECURE: Sanitize filename using security utility
+    const sanitizedName = sanitizeFileName(fileName);
     const fullFileName = sanitizedName.endsWith('.txt')
       ? sanitizedName
       : `${sanitizedName}.txt`;
 
-    const filePath = path.join(config.freeradius.coaDir, fullFileName);
+    // SECURE: Use getSafePath to prevent directory traversal
+    const filePath = getSafePath(config.freeradius.coaDir, fullFileName);
 
     // Write attributes to file
     await fs.writeFile(filePath, attributes, 'utf-8');
@@ -75,6 +77,16 @@ export async function createCoaFile(
  */
 export async function executeCoaCommand(request: CoaRequest): Promise<CoaResponse> {
   try {
+    // SECURE: Validate IP address
+    if (!isValidIpAddress(request.nasIp)) {
+      throw new Error('Invalid NAS IP address format.');
+    }
+
+    // SECURE: Validate request type
+    if (!isValidCoaRequestType(request.type)) {
+      throw new Error('Invalid request type. Must be "coa" or "disconnect".');
+    }
+
     let filePath: string;
 
     // Create COA file if not using existing one
@@ -84,7 +96,8 @@ export async function executeCoaCommand(request: CoaRequest): Promise<CoaRespons
       const result = await createCoaFile(autoFileName, request.attributes);
       filePath = result.filePath;
     } else {
-      filePath = path.join(config.freeradius.coaDir, request.fileName);
+      // SECURE: Use getSafePath to prevent directory traversal
+      filePath = getSafePath(config.freeradius.coaDir, request.fileName);
     }
 
     // Build radclient command
@@ -137,7 +150,8 @@ export async function listCoaFiles(): Promise<string[]> {
  */
 export async function getCoaFileContent(fileName: string): Promise<string> {
   try {
-    const filePath = path.join(config.freeradius.coaDir, fileName);
+    // SECURE: Use getSafePath to prevent directory traversal
+    const filePath = getSafePath(config.freeradius.coaDir, fileName);
     return await fs.readFile(filePath, 'utf-8');
   } catch (error: any) {
     logger.error(`Error reading COA file: ${error.message}`);
@@ -150,7 +164,8 @@ export async function getCoaFileContent(fileName: string): Promise<string> {
  */
 export async function deleteCoaFile(fileName: string): Promise<void> {
   try {
-    const filePath = path.join(config.freeradius.coaDir, fileName);
+    // SECURE: Use getSafePath to prevent directory traversal
+    const filePath = getSafePath(config.freeradius.coaDir, fileName);
     await fs.unlink(filePath);
     logger.info(`COA file deleted: ${filePath}`);
   } catch (error: any) {

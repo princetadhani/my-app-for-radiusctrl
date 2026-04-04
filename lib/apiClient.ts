@@ -195,6 +195,15 @@ export async function readLogs(lines?: number): Promise<LogEntry[]> {
   return data.logs;
 }
 
+export async function getCoaFileTree(): Promise<FileNode[]> {
+  const res = await fetch(`${API_BASE_URL}/api/coa/tree`);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch COA file tree: ${res.status}`);
+  }
+  const data = await res.json();
+  return data.tree;
+}
+
 export async function executeCoaCommand(request: CoaRequest): Promise<{ success: boolean; output: string; fileName?: string }> {
   const res = await fetch(`${API_BASE_URL}/api/coa/execute`, {
     method: 'POST',

@@ -1,8 +1,22 @@
 import express from 'express';
 import * as coaService from '../services/coaService';
-import logger from '../utils/logger';
+import * as fileService from '../services/fileService';
+import config from '../config';
 
 const router = express.Router();
+
+/**
+ * GET /api/coa/tree
+ * Get COA directory file tree structure
+ */
+router.get('/tree', async (req, res, next) => {
+  try {
+    const tree = await fileService.buildFileTree(config.freeradius.coaDir);
+    res.json({ tree });
+  } catch (error) {
+    next(error);
+  }
+});
 
 /**
  * GET /api/coa/files
@@ -24,9 +38,18 @@ router.get('/files', async (req, res, next) => {
 router.get('/files/:fileName', async (req, res, next) => {
   try {
     const { fileName } = req.params;
+
+    if (!fileName) {
+      return res.status(400).json({ error: 'fileName is required' });
+    }
+
     const content = await coaService.getCoaFileContent(fileName);
     res.json({ content });
-  } catch (error) {
+  } catch (error: any) {
+    // Return 403 for security violations (path traversal)
+    if (error.message && error.message.includes('Path Traversal')) {
+      return res.status(403).json({ error: error.message });
+    }
     next(error);
   }
 });
@@ -38,14 +61,18 @@ router.get('/files/:fileName', async (req, res, next) => {
 router.post('/create', async (req, res, next) => {
   try {
     const { fileName, attributes } = req.body;
-    
+
     if (!fileName || !attributes) {
       return res.status(400).json({ error: 'fileName and attributes are required' });
     }
 
     const result = await coaService.createCoaFile(fileName, attributes);
     res.json(result);
-  } catch (error) {
+  } catch (error: any) {
+    // Return 403 for security violations (path traversal)
+    if (error.message && error.message.includes('Path Traversal')) {
+      return res.status(403).json({ error: error.message });
+    }
     next(error);
   }
 });
@@ -57,7 +84,7 @@ router.post('/create', async (req, res, next) => {
 router.post('/execute', async (req, res, next) => {
   try {
     const { type, nasIp, nasSecret, attributes, fileName } = req.body;
-    
+
     if (!type || !nasIp || !nasSecret || !attributes) {
       return res.status(400).json({ error: 'type, nasIp, nasSecret, and attributes are required' });
     }
@@ -69,9 +96,18 @@ router.post('/execute', async (req, res, next) => {
       attributes,
       fileName,
     });
-    
+
     res.json(result);
-  } catch (error) {
+  } catch (error: any) {
+    // Return appropriate status codes for different error types
+    if (error.message) {
+      if (error.message.includes('Invalid NAS IP') || error.message.includes('Invalid request type')) {
+        return res.status(400).json({ error: error.message });
+      }
+      if (error.message.includes('Path Traversal')) {
+        return res.status(403).json({ error: error.message });
+      }
+    }
     next(error);
   }
 });
@@ -83,9 +119,18 @@ router.post('/execute', async (req, res, next) => {
 router.delete('/files/:fileName', async (req, res, next) => {
   try {
     const { fileName } = req.params;
+
+    if (!fileName) {
+      return res.status(400).json({ error: 'fileName is required' });
+    }
+
     await coaService.deleteCoaFile(fileName);
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
+    // Return 403 for security violations (path traversal)
+    if (error.message && error.message.includes('Path Traversal')) {
+      return res.status(403).json({ error: error.message });
+    }
     next(error);
   }
 });

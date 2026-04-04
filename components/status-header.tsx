@@ -12,9 +12,14 @@ export function StatusHeader({ currentFile }: { currentFile?: string }) {
 
   useEffect(() => {
     const fetchStatus = async () => {
-      const data = await getRadiusStatus();
-      setStatus(data.status);
-      setRequestsPerSecond(data.requests_per_second || 0);
+      try {
+        const data = await getRadiusStatus();
+        setStatus(data.status);
+        setRequestsPerSecond(data.requests_per_second || 0);
+      } catch (error) {
+        console.error('Failed to fetch RADIUS status:', error);
+        // Keep current status on error, don't crash the UI
+      }
     };
 
     fetchStatus();

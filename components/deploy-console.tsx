@@ -222,16 +222,27 @@ export function DeployConsole() {
             <Trash2 className="h-4 w-4" />
           </button>
 
-          {/* Deploy/Apply Button */}
+          {/* Deploy/Apply Button - Matching Send button shape */}
           <button
             onClick={handleDeploy}
             disabled={isRunning}
-            className="relative flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-all bg-neon-green/20 hover:bg-neon-green/30 border border-neon-green/40 text-neon-green neon-glow-green disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden group"
+            className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold transition-all relative overflow-hidden group disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{
+              background: !isRunning
+                ? 'linear-gradient(135deg, rgba(158, 206, 106, 0.2), rgba(158, 206, 106, 0.15))'
+                : 'rgba(139, 148, 158, 0.1)',
+              border: !isRunning
+                ? '1px solid rgba(158, 206, 106, 0.4)'
+                : '1px solid rgba(139, 148, 158, 0.2)',
+              color: !isRunning ? '#9ece6a' : '#8b949e',
+              boxShadow: !isRunning ? '0 0 12px rgba(158, 206, 106, 0.3)' : 'none',
+            }}
           >
-            {/* Animated background shimmer */}
-            <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-neon-green/10 to-transparent" />
-
-            <Play className={`h-3 w-3 relative z-10 ${isRunning ? 'animate-pulse' : ''}`} />
+            {/* Shimmer effect */}
+            {!isRunning && (
+              <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+            )}
+            <Play className={`h-3.5 w-3.5 relative z-10 ${isRunning ? 'animate-pulse' : ''}`} />
             <span className="relative z-10">
               {isValidating ? 'Validating...' : isRunning ? 'Deploying...' : 'Apply & Deploy'}
             </span>
