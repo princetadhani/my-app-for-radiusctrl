@@ -37,7 +37,7 @@ export default function CoaPage() {
     const editorRef = useRef<any>(null);
 
     // COA request state - Initialize with defaults first (to avoid hydration mismatch)
-    const [requestType, setRequestType] = useState<'coa' | 'disconnect'>('disconnect');
+    const [requestType, setRequestType] = useState<'coa' | 'disconnect'>('coa');
     const [nasIp, setNasIp] = useState('192.168.1.1');
     const [nasSecret, setNasSecret] = useState('testing123');
 

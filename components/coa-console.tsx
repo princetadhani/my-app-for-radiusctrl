@@ -204,32 +204,65 @@ export const CoaConsole = forwardRef<CoaConsoleHandle, CoaConsoleProps>(
 
           {/* Right Section */}
           <div className="flex items-center gap-2.5">
-            {/* Request Type Toggle - Styled */}
-            <div className="flex items-center rounded-lg overflow-hidden border" style={{
-              background: 'rgba(22, 27, 34, 0.8)',
-              borderColor: 'rgba(122, 162, 247, 0.2)',
-            }}>
-              <button
-                onClick={() => onRequestTypeChange('coa')}
-                className="px-3 py-1.5 text-xs font-semibold transition-all relative"
+            {/* Request Type Toggle - Glassmorphic Radio Button */}
+            <div
+              className="flex items-center relative rounded-lg overflow-hidden"
+              style={{
+                background: 'rgba(13, 17, 23, 0.6)',
+                backdropFilter: 'blur(12px)',
+                boxShadow: 'inset 1px 1px 4px rgba(122, 162, 247, 0.15), inset -1px -1px 6px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.15)',
+                border: '1px solid rgba(122, 162, 247, 0.2)',
+              }}
+            >
+              {/* Hidden radio inputs for accessibility */}
+              <input
+                type="radio"
+                name="request-type"
+                id="radio-coa"
+                checked={requestType === 'coa'}
+                onChange={() => onRequestTypeChange('coa')}
+                className="sr-only"
+              />
+              <input
+                type="radio"
+                name="request-type"
+                id="radio-disconnect"
+                checked={requestType === 'disconnect'}
+                onChange={() => onRequestTypeChange('disconnect')}
+                className="sr-only"
+              />
+
+              {/* Label buttons */}
+              <label
+                htmlFor="radio-coa"
+                className="flex items-center justify-center min-w-[80px] px-3 py-1.5 text-xs font-semibold cursor-pointer relative z-10 transition-colors duration-300"
                 style={{
-                  background: requestType === 'coa' ? 'linear-gradient(135deg, rgba(122, 162, 247, 0.2), rgba(122, 162, 247, 0.1))' : 'transparent',
-                  color: requestType === 'coa' ? '#7aa2f7' : '#8b949e',
-                  borderRight: '1px solid rgba(122, 162, 247, 0.15)',
+                  color: requestType === 'coa' ? '#ffffff' : '#8b949e',
                 }}
               >
                 CoA
-              </button>
-              <button
-                onClick={() => onRequestTypeChange('disconnect')}
-                className="px-3 py-1.5 text-xs font-semibold transition-all relative"
+              </label>
+              <label
+                htmlFor="radio-disconnect"
+                className="flex items-center justify-center min-w-[80px] px-3 py-1.5 text-xs font-semibold cursor-pointer relative z-10 transition-colors duration-300"
                 style={{
-                  background: requestType === 'disconnect' ? 'linear-gradient(135deg, rgba(122, 162, 247, 0.2), rgba(122, 162, 247, 0.1))' : 'transparent',
-                  color: requestType === 'disconnect' ? '#7aa2f7' : '#8b949e',
+                  color: requestType === 'disconnect' ? '#ffffff' : '#8b949e',
                 }}
               >
                 Disconnect
-              </button>
+              </label>
+
+              {/* Animated glider */}
+              <div
+                className="absolute top-0 bottom-0 rounded-lg z-0 transition-all duration-500"
+                style={{
+                  width: 'calc(50%)',
+                  transform: requestType === 'coa' ? 'translateX(0%)' : 'translateX(100%)',
+                  background: 'linear-gradient(135deg, rgba(122, 162, 247, 0.35), rgba(122, 162, 247, 0.25))',
+                  boxShadow: '0 0 18px rgba(122, 162, 247, 0.4), 0 0 10px rgba(122, 162, 247, 0.3) inset',
+                  transitionTimingFunction: 'cubic-bezier(0.37, 1.95, 0.66, 0.56)',
+                }}
+              />
             </div>
 
             {/* NAS IP - Styled */}
