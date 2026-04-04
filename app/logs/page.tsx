@@ -107,7 +107,7 @@ export default function LogsPage() {
           className="h-full glass-panel border-r border-border overflow-hidden"
         >
           {/* Toggle Button */}
-          <div className="h-12 border-b border-border flex items-center justify-between px-2">
+          <div className="h-10 border-b border-border flex items-center justify-between px-2">
             {!isSidebarCollapsed && (
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2">
                 Log Info
@@ -137,7 +137,7 @@ export default function LogsPage() {
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
                 className="p-4 space-y-6 overflow-y-auto"
-                style={{ height: 'calc(100% - 48px)' }}
+                style={{ height: 'calc(100% - 40px)' }}
               >
                 {/* Stream Status */}
                 <div className="space-y-2">
