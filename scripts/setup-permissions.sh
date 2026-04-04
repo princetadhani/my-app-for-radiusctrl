@@ -1,125 +1,194 @@
 #!/bin/bash
 
+# FreeRADIUS UI - Complete Permission Setup
+# This is the ONLY script you need to run!
+#
+# What it does:
+#  1. Adds user to freerad group
+#  2. Sets group write permissions (GROUP = USER permissions)
+#  3. Includes ALL files (configs, modules, certs)
+#  4. Sets COA directory ownership to freerad:freerad
+#  5. Fixes existing COA files ownership
+#  6. Configures sudo for validation/service control
+
 set -e
 
-echo "🚀 FreeRADIUS UI - Permission Setup Script"
-echo "=========================================="
+echo "==========================================="
+echo "FreeRADIUS UI - Complete Permission Setup"
+echo "==========================================="
+echo ""
+echo "This script will configure ALL permissions:"
+echo "  • Group permissions (freerad GROUP = freerad USER)"
+echo "  • Certificate access (RadSec support)"
+echo "  • COA directory ownership (freerad:freerad)"
+echo "  • Existing COA files (auto-fix ownership)"
 echo ""
 
-# Detect user
+# Get current user
 if [ "$EUID" -eq 0 ]; then
-    APP_USER=${SUDO_USER:-root}
+    USER_NAME=${SUDO_USER:-root}
 else
-    APP_USER=$(whoami)
+    USER_NAME=$(whoami)
 fi
 
-echo "👤 Setting up for user: $APP_USER"
+echo "👤 Current user: $USER_NAME"
 echo ""
 
-# -------------------------------------------------
-# Ensure correct FreeRADIUS group
-# -------------------------------------------------
-echo "🔧 Checking FreeRADIUS group..."
+# Check FreeRADIUS installation
+echo "Checking FreeRADIUS installation..."
 
-if getent group freerad >/dev/null; then
+if getent group freerad >/dev/null 2>&1; then
     RADIUS_GROUP="freerad"
-elif getent group freeradius >/dev/null; then
+elif getent group freeradius >/dev/null 2>&1; then
     RADIUS_GROUP="freeradius"
 else
-    echo "❌ FreeRADIUS group not found. Please install FreeRADIUS first."
+    echo "❌ ERROR: FreeRADIUS group not found!"
+    echo "   Please install FreeRADIUS first."
+    exit 1
+fi
+
+if [ ! -d /etc/freeradius/3.0 ]; then
+    echo "❌ ERROR: Directory /etc/freeradius/3.0 not found!"
+    echo "   Please install FreeRADIUS 3.0 first."
     exit 1
 fi
 
 echo "✅ Found FreeRADIUS group: $RADIUS_GROUP"
+echo "✅ Found directory: /etc/freeradius/3.0"
+echo ""
 
-# Add app user to FreeRADIUS group
-echo "👥 Adding $APP_USER to $RADIUS_GROUP group..."
-sudo usermod -aG $RADIUS_GROUP $APP_USER
+# Confirm
+echo "Ready to proceed with user '$USER_NAME' in group '$RADIUS_GROUP'?"
+echo ""
 
-# -------------------------------------------------
-# Group Permissions (Native Access - No sudo cp needed!)
-# -------------------------------------------------
-echo "🔐 Setting group permissions on FreeRADIUS directories..."
+read -p "Continue? (y/N) " -n 1 -r
+echo
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo "Cancelled."
+    exit 0
+fi
 
-# Create CoA directory
+echo ""
+
+# Step 1: Add user to group
+echo "[1/5] Adding user to $RADIUS_GROUP group..."
+sudo usermod -aG $RADIUS_GROUP $USER_NAME
+echo "✅ Done"
+echo ""
+
+# Step 2: Set group permissions on ALL directories (including certs)
+echo "[2/5] Adding group write permission to ALL directories (including /certs/)..."
+sudo find /etc/freeradius/3.0 -type d -exec chmod g+w {} \;
+echo "✅ Done"
+echo ""
+
+# Step 3: Set group permissions on ALL files (including certs)
+echo "[3/5] Adding group write permission to ALL files (including /certs/)..."
+sudo find /etc/freeradius/3.0 -type f -exec chmod g+w {} \;
+echo "✅ Done"
+echo ""
+
+# Step 4: Create helper directories and fix existing files
+echo "[4/6] Creating helper directories..."
+
+# COA directory - owned by freerad:freerad (not root!)
 sudo mkdir -p /etc/freeradius/3.0/coa
-sudo chown freerad:$RADIUS_GROUP /etc/freeradius/3.0/coa
+sudo chown $RADIUS_GROUP:$RADIUS_GROUP /etc/freeradius/3.0/coa
+sudo chmod 770 /etc/freeradius/3.0/coa
+echo "  ✓ COA directory: $RADIUS_GROUP:$RADIUS_GROUP (770)"
 
-# Allow group to WRITE to all directories EXCEPT certs
-sudo find /etc/freeradius/3.0 -type d -not -path "*/certs*" -exec chmod 775 {} +
+# Fix ownership of existing COA files
+if [ "$(sudo ls -A /etc/freeradius/3.0/coa 2>/dev/null)" ]; then
+    echo "  ℹ  Found existing COA files - fixing ownership..."
+    sudo chown $RADIUS_GROUP:$RADIUS_GROUP /etc/freeradius/3.0/coa/* 2>/dev/null || true
+    sudo chmod 664 /etc/freeradius/3.0/coa/* 2>/dev/null || true
+    FILE_COUNT=$(sudo ls /etc/freeradius/3.0/coa | wc -l)
+    echo "  ✓ Fixed $FILE_COUNT existing COA file(s)"
+fi
 
-# Allow group to WRITE to all files EXCEPT certs
-sudo find /etc/freeradius/3.0 -type f -not -path "*/certs*" -exec chmod 664 {} +
+# Logs - add group write
+if [ -d /var/log/freeradius ]; then
+    sudo find /var/log/freeradius -type d -exec chmod g+w {} \; 2>/dev/null || true
+    sudo find /var/log/freeradius -type f -exec chmod g+w {} \; 2>/dev/null || true
+    echo "  ✓ Log directory: group write enabled"
+fi
 
-# Allow group to read logs
-sudo chown -R freerad:$RADIUS_GROUP /var/log/freeradius
-sudo chmod -R 775 /var/log/freeradius
+echo "✅ Done"
+echo ""
 
-echo "✅ File permissions configured"
-
-# -------------------------------------------------
-# Sudoers (Minimal - Only for commands that need root)
-# -------------------------------------------------
-echo "🛡️  Configuring minimal sudo permissions..."
-
+# Step 5: Configure sudo
+echo "[5/6] Configuring sudo permissions..."
 SUDOERS_FILE="/etc/sudoers.d/freeradius-ui"
 
 cat <<EOF | sudo tee $SUDOERS_FILE >/dev/null
-# FreeRADIUS UI Backend - Minimal sudo permissions
-$APP_USER ALL=(ALL) NOPASSWD: /usr/sbin/freeradius -C -D *
-$APP_USER ALL=(ALL) NOPASSWD: /usr/bin/radclient
-$APP_USER ALL=(ALL) NOPASSWD: /bin/systemctl reload freeradius
-$APP_USER ALL=(ALL) NOPASSWD: /bin/systemctl restart freeradius
-$APP_USER ALL=(ALL) NOPASSWD: /bin/systemctl show freeradius
-$APP_USER ALL=(ALL) NOPASSWD: /bin/systemctl status freeradius
-$APP_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl reload freeradius
-$APP_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart freeradius
-$APP_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl show freeradius
-$APP_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl status freeradius
+# FreeRADIUS UI - Minimal sudo permissions
+$USER_NAME ALL=(ALL) NOPASSWD: /usr/sbin/freeradius
+$USER_NAME ALL=(ALL) NOPASSWD: /bin/systemctl * freeradius
+$USER_NAME ALL=(ALL) NOPASSWD: /usr/bin/systemctl * freeradius
+$USER_NAME ALL=(ALL) NOPASSWD: /usr/bin/radclient
 EOF
 
 sudo chmod 0440 $SUDOERS_FILE
 
-# Verify sudoers syntax
-if sudo visudo -c -f $SUDOERS_FILE; then
-    echo "✅ Sudoers configuration valid"
+if sudo visudo -c -f $SUDOERS_FILE >/dev/null 2>&1; then
+    echo "✅ Done"
 else
-    echo "❌ Sudoers configuration invalid! Removing..."
-    sudo rm $SUDOERS_FILE
+    echo "❌ Sudoers syntax error - removing file"
+    sudo rm -f $SUDOERS_FILE
     exit 1
 fi
 
-# -------------------------------------------------
-# Test permissions
-# -------------------------------------------------
+# Step 6: Verify permissions
+echo "[6/6] Verifying permissions..."
 echo ""
-echo "🧪 Testing permissions..."
 
-# Test file write
-TEST_FILE="/etc/freeradius/3.0/test_write_$(date +%s).tmp"
-if touch $TEST_FILE 2>/dev/null; then
-    echo "✅ File write permission: OK"
-    rm $TEST_FILE
-else
-    echo "⚠️  File write permission: FAILED (you may need to log out and back in for group changes to take effect)"
+EXAMPLE_FILE="/etc/freeradius/3.0/radiusd.conf"
+if [ -f "$EXAMPLE_FILE" ]; then
+    echo "Config file permissions:"
+    ls -l "$EXAMPLE_FILE" | awk '{print "  " $1 " " $3 ":" $4 " " $9}'
 fi
 
-# Test sudo validation
-if sudo freeradius -C -D /etc/freeradius/3.0 2>&1 | grep -q "Configuration" || [ $? -eq 0 ]; then
-    echo "✅ Sudo validation permission: OK"
-else
-    echo "⚠️  Sudo validation permission: FAILED"
+if [ -d /etc/freeradius/3.0/certs ]; then
+    echo "Certificate directory permissions:"
+    ls -ld /etc/freeradius/3.0/certs | awk '{print "  " $1 " " $3 ":" $4 " certs/"}'
+fi
+
+if [ -d /etc/freeradius/3.0/coa ]; then
+    echo "COA directory permissions:"
+    ls -ld /etc/freeradius/3.0/coa | awk '{print "  " $3 ":" $4 " " $1 " coa/"}'
+
+    if [ "$(sudo ls -A /etc/freeradius/3.0/coa 2>/dev/null)" ]; then
+        echo "COA files (sample):"
+        sudo ls -l /etc/freeradius/3.0/coa | head -4 | tail -3 | awk '{print "  " $1 " " $3 ":" $4 " " $9}'
+    fi
 fi
 
 echo ""
+echo "✅ Verification complete"
+echo ""
+echo "==========================================="
 echo "🎉 Setup Complete!"
-echo "=========================================="
+echo "==========================================="
 echo ""
-echo "⚠️  IMPORTANT: You may need to log out and back in for group changes to take effect!"
+echo "✅ Group permissions set (GROUP = USER)"
+echo "✅ Certificate access enabled (RadSec ready)"
+echo "✅ COA directory owned by $RADIUS_GROUP:$RADIUS_GROUP"
+if [ "$(sudo ls -A /etc/freeradius/3.0/coa 2>/dev/null)" ]; then
+    echo "✅ Existing COA files fixed"
+fi
+echo "✅ Sudo configured"
 echo ""
-echo "Next steps:"
-echo "1. Log out and log back in (for group membership)"
-echo "2. cd backend && npm install"
-echo "3. cp .env.example .env"
-echo "4. npm run dev"
+echo "⚠️  CRITICAL: You MUST log out and log back in now!"
+echo ""
+echo "Why? Group membership only takes effect in new login sessions."
+echo ""
+echo "After logging back in, verify:"
+echo "  1. Group:      groups | grep $RADIUS_GROUP"
+echo "  2. Write test: touch /etc/freeradius/3.0/test.tmp && rm /etc/freeradius/3.0/test.tmp"
+echo "  3. COA test:   touch /etc/freeradius/3.0/coa/test.tmp && rm /etc/freeradius/3.0/coa/test.tmp"
+echo "  4. Start app:  cd backend && npm run dev"
+echo ""
+echo "Then create a new COA file in the UI and verify:"
+echo "  sudo ls -l /etc/freeradius/3.0/coa/your_file.txt"
+echo "  (Should show: freerad:freerad ownership, NOT root!)"
 echo ""

@@ -88,6 +88,7 @@ export async function getFileContent(filePath: string): Promise<FileContentRespo
 /**
  * Save file with conflict detection
  * Uses shadow buffer logic - compares mtime to detect external changes
+ * Preserves original file ownership and permissions
  */
 export async function saveFile(
   filePath: string,
@@ -96,11 +97,12 @@ export async function saveFile(
   force: boolean = false
 ): Promise<SaveFileResponse> {
   try {
+    // Get original file stats for permission preservation
+    const originalStats = await fs.stat(filePath);
+
     // Check if file was modified externally
     if (!force && clientMtime !== null) {
-      const stats = await fs.stat(filePath);
-
-      if (stats.mtimeMs !== clientMtime) {
+      if (originalStats.mtimeMs !== clientMtime) {
         // File was modified externally - conflict detected
         const diskContent = await fs.readFile(filePath, 'utf-8');
         const diff = Diff.createTwoFilesPatch(
@@ -121,12 +123,24 @@ export async function saveFile(
       }
     }
 
-    // Write file directly (user should be in freerad group with write permissions)
-    // If this fails due to permissions, the catch block will handle it
+    // Write file content
+    // User should be in freerad group with write permissions (664)
     await fs.writeFile(filePath, content, 'utf-8');
+
+    // Preserve original ownership and permissions
+    // This is critical to maintain FreeRADIUS security model
+    try {
+      await fs.chown(filePath, originalStats.uid, originalStats.gid);
+      await fs.chmod(filePath, originalStats.mode);
+    } catch (chownError: any) {
+      // If chown fails (user not owner), that's okay as long as write succeeded
+      // The file will retain the writer's ownership but correct permissions
+      logger.warn(`Could not preserve ownership for ${filePath}: ${chownError.message}`);
+    }
+
     const newStats = await fs.stat(filePath);
 
-    logger.info(`File saved successfully: ${filePath}`);
+    logger.info(`File saved successfully: ${filePath} (mode: ${originalStats.mode.toString(8)})`);
 
     return {
       status: 'success',

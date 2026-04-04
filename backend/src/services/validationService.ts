@@ -21,10 +21,13 @@ export interface DeployResult {
 }
 
 /**
- * Copy directory recursively
+ * Copy directory recursively for testing
+ * Creates a temporary copy with safe permissions for validation
+ * IMPORTANT: This copy is ONLY for testing - never copy back to production!
  */
 async function copyDirectory(src: string, dest: string): Promise<void> {
-  await fs.mkdir(dest, { recursive: true });
+  // Create destination directory with readable permissions
+  await fs.mkdir(dest, { recursive: true, mode: 0o755 });
   const entries = await fs.readdir(src, { withFileTypes: true });
 
   for (const entry of entries) {
@@ -34,7 +37,15 @@ async function copyDirectory(src: string, dest: string): Promise<void> {
     if (entry.isDirectory()) {
       await copyDirectory(srcPath, destPath);
     } else {
+      // Copy file content
       await fs.copyFile(srcPath, destPath);
+
+      // Set safe permissions on temp copy (readable for testing)
+      // We use 644 because:
+      // 1. This is a temp directory for validation only
+      // 2. FreeRADIUS needs to read these files during validation
+      // 3. We NEVER copy this back to production
+      await fs.chmod(destPath, 0o644);
     }
   }
 }
@@ -187,9 +198,21 @@ export async function safeSaveAndValidate(
       };
     }
 
-    // Step 4: Swap - Copy validated file to live directory
+    // Step 4: Swap - Deploy validated file to production
     logger.info('Step 4: Deploying validated configuration...');
+
+    // Get original file stats to preserve ownership and permissions
+    const originalStats = await fs.stat(filePath);
+
+    // Write the new content
     await fs.writeFile(filePath, content, 'utf-8');
+
+    // Restore original ownership and permissions
+    // This is important when running as a user in freerad group
+    await fs.chown(filePath, originalStats.uid, originalStats.gid);
+    await fs.chmod(filePath, originalStats.mode);
+
+    logger.info(`File deployed with preserved permissions: ${originalStats.mode.toString(8)}`);
 
     // Cleanup test directory
     await fs.rm(testDir, { recursive: true, force: true });

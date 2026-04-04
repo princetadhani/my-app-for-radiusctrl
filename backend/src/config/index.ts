@@ -14,9 +14,6 @@ export const config = {
     coaDir: process.env.FREERADIUS_COA_DIR || '/etc/freeradius/3.0/coa',
     serviceName: process.env.FREERADIUS_SERVICE_NAME || 'freeradius',
   },
-  staging: {
-    dir: process.env.STAGING_DIR || '/opt/radius-ui/staging',
-  },
   websocket: {
     corsOrigin: process.env.WEBSOCKET_CORS_ORIGIN || 'http://localhost:3000',
   },

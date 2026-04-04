@@ -9,11 +9,11 @@ export interface DeployOutput {
 }
 
 export const mockValidationSuccess: DeployOutput[] = [
-  { text: "$ freeradius -C -d /tmp/raddb_staging/", type: "cmd", delay: 0 },
+  { text: "$ freeradius -C -d /tmp/radius_test/", type: "cmd", delay: 0 },
   { text: "Loading configuration files...", type: "info", delay: 400 },
-  { text: "  including /tmp/raddb_staging/radiusd.conf", type: "info", delay: 600 },
-  { text: "  including /tmp/raddb_staging/clients.conf", type: "info", delay: 800 },
-  { text: "  including /tmp/raddb_staging/users", type: "info", delay: 1000 },
+  { text: "  including /tmp/radius_test/radiusd.conf", type: "info", delay: 600 },
+  { text: "  including /tmp/radius_test/clients.conf", type: "info", delay: 800 },
+  { text: "  including /tmp/radius_test/users", type: "info", delay: 1000 },
   { text: "Reading configuration files:", type: "info", delay: 1200 },
   { text: "  Module: eap ........... OK", type: "success", delay: 1800 },
   { text: "  Module: ldap .......... OK", type: "success", delay: 2200 },
@@ -25,9 +25,9 @@ export const mockValidationSuccess: DeployOutput[] = [
 ];
 
 export const mockValidationError: DeployOutput[] = [
-  { text: "$ freeradius -C -d /tmp/raddb_staging/", type: "cmd", delay: 0 },
+  { text: "$ freeradius -C -d /tmp/radius_test/", type: "cmd", delay: 0 },
   { text: "Loading configuration files...", type: "info", delay: 400 },
-  { text: "  including /tmp/raddb_staging/radiusd.conf", type: "info", delay: 600 },
+  { text: "  including /tmp/radius_test/radiusd.conf", type: "info", delay: 600 },
   { text: "ERROR: Syntax error in radiusd.conf line 23", type: "error", delay: 1200 },
   { text: "✗ Configuration validation failed. Deploy aborted.", type: "final-error", delay: 1800 },
 ];

@@ -26,7 +26,6 @@ echo ""
 
 # Create directories
 echo "📁 Creating required directories..."
-sudo mkdir -p /opt/radius-ui/staging
 sudo mkdir -p /etc/freeradius/3.0/coa
 sudo mkdir -p /var/log/freeradius
 
@@ -36,7 +35,6 @@ echo ""
 # Set permissions (development mode)
 echo "🔐 Setting permissions..."
 USER_NAME=$(whoami)
-sudo chown -R $USER_NAME:$USER_NAME /opt/radius-ui 2>/dev/null || true
 sudo chown -R $USER_NAME:$USER_NAME /etc/freeradius/3.0/coa 2>/dev/null || true
 
 echo "✅ Permissions set for user: $USER_NAME"

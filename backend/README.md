@@ -34,7 +34,6 @@ PORT=3001
 FREERADIUS_BASE_DIR=/etc/freeradius/3.0
 FREERADIUS_LOG_FILE=/var/log/freeradius/radius.log
 FREERADIUS_COA_DIR=/etc/freeradius/3.0/coa
-STAGING_DIR=/opt/radius-ui/staging
 WEBSOCKET_CORS_ORIGIN=http://localhost:3000
 ```
 

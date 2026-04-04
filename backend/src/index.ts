@@ -11,6 +11,11 @@ import serviceRoutes from './routes/serviceRoutes';
 import { initializeFileWatcher } from './services/fileWatcher';
 import { initializeLogStreamer } from './services/logStreamer';
 
+// Set umask to ensure new files get group write permissions
+// 0o002 means: 666 - 002 = 664 (rw-rw-r--)
+// This is important when creating new files in /etc/freeradius/3.0/
+process.umask(0o002);
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {

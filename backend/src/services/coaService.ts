@@ -23,6 +23,7 @@ export interface CoaResponse {
 
 /**
  * Create COA file in the COA directory
+ * Files are created with freerad:freerad ownership to match FreeRADIUS files
  */
 export async function createCoaFile(
   fileName: string,
@@ -34,16 +35,30 @@ export async function createCoaFile(
 
     // Sanitize filename
     const sanitizedName = fileName.replace(/[^a-zA-Z0-9_-]/g, '_');
-    const fullFileName = sanitizedName.endsWith('.txt') 
-      ? sanitizedName 
+    const fullFileName = sanitizedName.endsWith('.txt')
+      ? sanitizedName
       : `${sanitizedName}.txt`;
-    
+
     const filePath = path.join(config.freeradius.coaDir, fullFileName);
 
     // Write attributes to file
     await fs.writeFile(filePath, attributes, 'utf-8');
 
-    logger.info(`COA file created: ${filePath}`);
+    // Get COA directory stats to match ownership
+    try {
+      const dirStats = await fs.stat(config.freeradius.coaDir);
+
+      // Set ownership to match COA directory (freerad:freerad)
+      await fs.chown(filePath, dirStats.uid, dirStats.gid);
+
+      // Set permissions: rw-rw-r-- (664)
+      await fs.chmod(filePath, 0o664);
+
+      logger.info(`COA file created: ${filePath} (${dirStats.uid}:${dirStats.gid})`);
+    } catch (chownError: any) {
+      // If chown fails, log warning but continue
+      logger.warn(`Could not set ownership for ${filePath}: ${chownError.message}`);
+    }
 
     return {
       success: true,
@@ -95,7 +110,7 @@ export async function executeCoaCommand(request: CoaRequest): Promise<CoaRespons
     };
   } catch (error: any) {
     logger.error(`COA command error: ${error.message}`);
-    
+
     return {
       success: false,
       output: error.stderr || error.stdout || error.message,

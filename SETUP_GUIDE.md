@@ -83,15 +83,12 @@ PORT=3001
 FREERADIUS_BASE_DIR=/etc/freeradius/3.0
 FREERADIUS_LOG_FILE=/var/log/freeradius/radius.log
 FREERADIUS_COA_DIR=/etc/freeradius/3.0/coa
-STAGING_DIR=/opt/radius-ui/staging
 WEBSOCKET_CORS_ORIGIN=http://localhost:3000
 ```
 
-Create staging directory:
+Create required directories:
 ```bash
-sudo mkdir -p /opt/radius-ui/staging
 sudo mkdir -p /etc/freeradius/3.0/coa
-sudo chown -R $USER:$USER /opt/radius-ui
 sudo chown -R $USER:$USER /etc/freeradius/3.0/coa
 ```
 
@@ -245,7 +242,7 @@ See `backend/README.md` for complete API documentation.
 ### Validation fails
 - Test manually: `sudo freeradius -C -d /etc/freeradius/3.0/`
 - Check FreeRADIUS config syntax
-- Verify staging directory permissions
+- Verify FreeRADIUS configuration file permissions
 
 ## Security Notes
 
