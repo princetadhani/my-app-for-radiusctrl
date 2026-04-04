@@ -38,8 +38,8 @@ export default function CoaPage() {
 
     // COA request state - Initialize with defaults first (to avoid hydration mismatch)
     const [requestType, setRequestType] = useState<'coa' | 'disconnect'>('coa');
-    const [nasIp, setNasIp] = useState('192.168.1.1');
-    const [nasSecret, setNasSecret] = useState('testing123');
+    const [nasIp, setNasIp] = useState('10.86.1.1');
+    const [nasSecret, setNasSecret] = useState('');
 
     // Console ref
     const consoleRef = useRef<CoaConsoleHandle>(null);
@@ -293,7 +293,7 @@ export default function CoaPage() {
                 <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
                     {/* Top Toolbar */}
                     <div
-                        className="h-10 border-b flex items-center justify-between px-4"
+                        className="border-b flex items-center justify-between px-4 py-2"
                         style={{
                             backgroundColor: 'rgba(18, 23, 35, 0.6)',
                             backdropFilter: 'blur(16px) saturate(1.2)',

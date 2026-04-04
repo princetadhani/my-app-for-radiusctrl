@@ -290,8 +290,8 @@ export const CoaConsole = forwardRef<CoaConsoleHandle, CoaConsoleProps>(
                 type="text"
                 value={nasSecret}
                 onChange={(e) => onNasSecretChange(e.target.value)}
-                placeholder="prince"
-                className="w-20 bg-transparent text-xs text-foreground focus:outline-none font-mono"
+                placeholder=""
+                className="w-28 bg-transparent text-xs text-foreground focus:outline-none font-mono"
               />
             </div>
 
