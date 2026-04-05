@@ -8,7 +8,7 @@ import { FileTree } from '@/components/file-tree';
 import { CoaConsole, type CoaConsoleHandle } from '@/components/coa-console';
 import { CustomDialog } from '@/components/custom-dialog';
 import { ConfirmDialog } from '@/components/confirm-dialog';
-import { toast } from 'sonner';
+import { customToast } from '@/lib/custom-toast';
 import {
     executeCoaCommand,
     getCoaFileTree,
@@ -74,7 +74,7 @@ export default function CoaPage() {
                 setFileTree(tree);
             } catch (error) {
                 console.error('Failed to load COA file tree:', error);
-                toast.error('Failed to load COA files');
+                customToast.error('Failed to load COA files');
             }
         };
 
@@ -113,7 +113,7 @@ export default function CoaPage() {
             setIsModified(false);
         } catch (error) {
             console.error('Failed to load file:', error);
-            toast.error('Failed to load file content');
+            customToast.error('Failed to load file content');
         }
     };
 
@@ -155,7 +155,7 @@ export default function CoaPage() {
     // Save file
     const handleSaveFile = async () => {
         if (!selectedFile) {
-            toast.error('No file selected');
+            customToast.error('No file selected');
             return;
         }
 
@@ -163,10 +163,10 @@ export default function CoaPage() {
             const fileName = selectedFile.split('/').pop() || '';
             await createCoaFile(fileName, attributes);
             setIsModified(false);
-            toast.success('File saved successfully');
+            customToast.success('File saved successfully');
         } catch (error) {
             console.error('Failed to save file:', error);
-            toast.error('Failed to save file');
+            customToast.error('Failed to save file');
         }
     };
 
@@ -186,17 +186,17 @@ export default function CoaPage() {
             setSelectedFile(newFilePath);
             setIsModified(false);
 
-            toast.success('File created successfully');
+            customToast.success('File created successfully');
         } catch (error) {
             console.error('Failed to create file:', error);
-            toast.error('Failed to create file');
+            customToast.error('Failed to create file');
         }
     };
 
     // Delete file
     const handleDeleteFile = async () => {
         if (!selectedFile) {
-            toast.error('No file selected');
+            customToast.error('No file selected');
             return;
         }
 
@@ -212,17 +212,17 @@ export default function CoaPage() {
             setSelectedFile('');
             setAttributes('');
             setIsDeleteDialogOpen(false);
-            toast.success('File deleted successfully');
+            customToast.success('File deleted successfully');
         } catch (error) {
             console.error('Failed to delete file:', error);
-            toast.error('Failed to delete file');
+            customToast.error('Failed to delete file');
         }
     };
 
     // Send COA command
     const handleSend = async (): Promise<{ success: boolean; output: string }> => {
         if (!selectedFile) {
-            toast.error('Please select a COA file first');
+            customToast.error('Please select a COA file first');
             return { success: false, output: '' };
         }
 
@@ -256,17 +256,17 @@ export default function CoaPage() {
 
             if (result.success) {
                 await consoleRef.current.addLine('✓ COA request sent successfully', 'final-success', 400);
-                toast.success('COA request sent successfully');
+                customToast.success('COA request sent successfully');
             } else {
                 await consoleRef.current.addLine('✗ COA request failed', 'final-error', 300);
-                toast.error('COA request failed');
+                customToast.error('COA request failed');
             }
 
             return result;
         } catch (error) {
             const errorMsg = error instanceof Error ? error.message : String(error);
             await consoleRef.current.addLine(`✗ Error: ${errorMsg}`, 'final-error', 100);
-            toast.error('Failed to send COA request');
+            customToast.error('Failed to send COA request');
             return { success: false, output: '' };
         }
     };

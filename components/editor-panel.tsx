@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import Editor, { OnMount } from '@monaco-editor/react';
 import { Loader2 } from 'lucide-react';
 import { getFileContent, saveFile } from '@/lib/api';
-import { toast } from 'sonner';
+import { customToast } from '@/lib/custom-toast';
 import { EditorTopBar } from '@/components/editor-top-bar';
 import { EditorEmptyState } from '@/components/editor-empty-state';
 
@@ -31,7 +31,7 @@ export function EditorPanel({ filePath, onConflict }: EditorPanelProps) {
 
         if (!data || !data.content) {
           console.error('Invalid response from API:', data);
-          toast.error('Invalid file data received');
+          customToast.error('Invalid file data received');
           setContent('');
           return;
         }
@@ -43,7 +43,7 @@ export function EditorPanel({ filePath, onConflict }: EditorPanelProps) {
         setIsModified(false);
       } catch (error) {
         console.error('Failed to load file:', error);
-        toast.error('Failed to load file: ' + (error instanceof Error ? error.message : String(error)));
+        customToast.error('Failed to load file: ' + (error instanceof Error ? error.message : String(error)));
         setContent('');
       } finally {
         setIsLoading(false);
@@ -74,16 +74,16 @@ export function EditorPanel({ filePath, onConflict }: EditorPanelProps) {
       if (result.status === 'conflict' && result.disk_content) {
         console.warn('⚠️  Conflict detected');
         onConflict?.(result.disk_content, content);
-        toast.warning('File was modified externally. Please resolve the conflict.');
+        customToast.warning('File was modified externally. Please resolve the conflict.');
       } else if (result.status === 'success') {
         console.log('✅ File saved successfully');
         setMtime(result.mtime || Date.now());
         setIsModified(false);
-        toast.success('File saved successfully');
+        customToast.success('File saved successfully');
       }
     } catch (error) {
       console.error('❌ Save error:', error);
-      toast.error('Failed to save file: ' + (error instanceof Error ? error.message : String(error)));
+      customToast.error('Failed to save file: ' + (error instanceof Error ? error.message : String(error)));
     } finally {
       setIsSaving(false);
     }
@@ -202,9 +202,31 @@ export function EditorPanel({ filePath, onConflict }: EditorPanelProps) {
   console.log('Rendering editor with content length:', content.length);
   console.log('Content preview:', content.substring(0, 200));
 
-  const handleCopyPath = () => {
-    navigator.clipboard.writeText(filePath);
-    toast.success('File path copied to clipboard');
+  const handleCopyPath = async () => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(filePath);
+        customToast.success('File path copied to clipboard');
+      } else {
+        // Fallback for older browsers or non-secure contexts
+        const textArea = document.createElement('textarea');
+        textArea.value = filePath;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+          document.execCommand('copy');
+          customToast.success('File path copied to clipboard');
+        } catch (err) {
+          customToast.error('Failed to copy to clipboard');
+        }
+        document.body.removeChild(textArea);
+      }
+    } catch (error) {
+      console.error('Failed to copy:', error);
+      customToast.error('Failed to copy to clipboard');
+    }
   };
 
   const handleReset = () => {
@@ -213,7 +235,7 @@ export function EditorPanel({ filePath, onConflict }: EditorPanelProps) {
       getFileContent(filePath).then(data => {
         setContent(data.content);
         setIsModified(false);
-        toast.success('Changes reset');
+        customToast.success('Changes reset');
       });
     }
   };

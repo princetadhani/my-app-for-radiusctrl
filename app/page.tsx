@@ -9,6 +9,7 @@ import { CommandPalette } from '@/components/command-palette';
 import { ConflictDialog } from '@/components/conflict-dialog';
 import { getFileTree, getSocket, type FileNode } from '@/lib/api';
 import { toast } from 'sonner';
+import { customToast } from '@/lib/custom-toast';
 import { TriangleAlert, FilePlus, Trash2, X } from 'lucide-react';
 
 export default function Home() {
@@ -36,7 +37,7 @@ export default function Home() {
         // This allows the empty state with animations to show
       } catch (error) {
         console.error('Error loading file tree:', error);
-        toast.error('Failed to load file tree');
+        customToast.error('Failed to load file tree');
       }
     };
 

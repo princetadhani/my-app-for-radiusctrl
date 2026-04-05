@@ -32,7 +32,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col grid-bg overflow-hidden">
         {children}
-        <Toaster position="top-right" theme="dark" closeButton />
+        <Toaster position="top-right" theme="dark" />
       </body>
     </html>
   );

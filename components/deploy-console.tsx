@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronUp, ChevronDown, Play, Trash2 } from 'lucide-react';
 import { validateConfiguration, reloadService } from '@/lib/api';
-import { toast } from 'sonner';
+import { customToast } from '@/lib/custom-toast';
 
 type LineType = 'cmd' | 'info' | 'success' | 'error' | 'final-success' | 'final-error';
 
@@ -129,7 +129,7 @@ export function DeployConsole() {
         }
 
         await addLine('✗ Configuration validation failed. Deploy aborted.', 'final-error', 400);
-        toast.error('Configuration validation failed');
+        customToast.error('Configuration validation failed');
         setIsRunning(false);
         return;
       }
@@ -152,15 +152,15 @@ export function DeployConsole() {
 
       if (reloadResult.success) {
         await addLine('✓ Deploy complete. Service reloaded successfully.', 'final-success', 500);
-        toast.success('Configuration deployed successfully');
+        customToast.success('Configuration deployed successfully');
       } else {
         await addLine('✗ Failed to reload service: ' + reloadResult.message, 'final-error', 300);
-        toast.error('Failed to reload service');
+        customToast.error('Failed to reload service');
       }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       await addLine('✗ Error: ' + errorMsg, 'final-error', 100);
-      toast.error('Deployment failed');
+      customToast.error('Deployment failed');
     } finally {
       setIsRunning(false);
     }

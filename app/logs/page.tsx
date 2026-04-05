@@ -6,7 +6,7 @@ import { Play, Pause, Trash2, Download, FileText, Activity, PanelLeftClose, Pane
 import { StatusHeader } from '@/components/status-header';
 import { Button } from '@/components/ui/button';
 import { readLogs, getSocket, type LogEntry } from '@/lib/api';
-import { toast } from 'sonner';
+import { customToast } from '@/lib/custom-toast';
 
 export default function LogsPage() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -29,7 +29,7 @@ export default function LogsPage() {
         }, 100);
       } catch (error) {
         console.error('Error loading logs:', error);
-        toast.error('Failed to load logs');
+        customToast.error('Failed to load logs');
       }
     };
 
