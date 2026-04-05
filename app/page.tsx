@@ -58,13 +58,13 @@ export default function Home() {
               onClick={() => toast.dismiss(t)}
               style={{
                 position: 'absolute',
-                left: '-12px',
-                top: '-12px',
+                left: '-10px',
+                top: '-10px',
                 background: 'hsl(225, 25%, 12%)',
                 border: '1px solid hsl(225, 15%, 18%)',
-                borderRadius: '50%',
-                width: '24px',
-                height: '24px',
+                borderRadius: '0.375rem',
+                width: '20px',
+                height: '20px',
                 color: 'hsl(210, 40%, 92%)',
                 cursor: 'pointer',
                 display: 'flex',
@@ -77,7 +77,7 @@ export default function Home() {
               onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
               onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.8')}
             >
-              <X size={14} />
+              <X size={12} />
             </button>
             <div
               style={{
@@ -117,13 +117,13 @@ export default function Home() {
               onClick={() => toast.dismiss(t)}
               style={{
                 position: 'absolute',
-                left: '-12px',
-                top: '-12px',
+                left: '-10px',
+                top: '-10px',
                 background: 'hsl(225, 25%, 12%)',
                 border: '1px solid hsl(225, 15%, 18%)',
-                borderRadius: '50%',
-                width: '24px',
-                height: '24px',
+                borderRadius: '0.375rem',
+                width: '20px',
+                height: '20px',
                 color: 'hsl(210, 40%, 92%)',
                 cursor: 'pointer',
                 display: 'flex',
@@ -136,7 +136,7 @@ export default function Home() {
               onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
               onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.8')}
             >
-              <X size={14} />
+              <X size={12} />
             </button>
             <div
               style={{
@@ -176,13 +176,13 @@ export default function Home() {
               onClick={() => toast.dismiss(t)}
               style={{
                 position: 'absolute',
-                left: '-12px',
-                top: '-12px',
+                left: '-10px',
+                top: '-10px',
                 background: 'hsl(225, 25%, 12%)',
                 border: '1px solid hsl(225, 15%, 18%)',
-                borderRadius: '50%',
-                width: '24px',
-                height: '24px',
+                borderRadius: '0.375rem',
+                width: '20px',
+                height: '20px',
                 color: 'hsl(210, 40%, 92%)',
                 cursor: 'pointer',
                 display: 'flex',
@@ -195,7 +195,7 @@ export default function Home() {
               onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
               onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.8')}
             >
-              <X size={14} />
+              <X size={12} />
             </button>
             <div
               style={{
