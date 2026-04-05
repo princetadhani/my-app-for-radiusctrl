@@ -83,15 +83,16 @@ export default function Home() {
               style={{
                 background: 'hsl(225, 25%, 12%, 0.95)',
                 border: '1px solid hsl(38, 95%, 60%, 0.6)',
-                borderRadius: 'var(--toast-border-radius, 0.5rem)',
-                padding: 'var(--toast-padding, 1rem)',
+                borderRadius: '0.5rem',
+                padding: '0.875rem 1rem',
                 color: 'hsl(210, 40%, 92%)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.75rem',
                 boxShadow: '0 0 12px hsl(38, 95%, 60%, 0.3), 0 0 4px hsl(38, 95%, 60%, 0.2)',
-                width: 'var(--width)',
-                fontSize: 'var(--toast-font-size, 0.875rem)',
+                fontSize: '0.875rem',
+                minWidth: '356px',
+                maxWidth: '356px',
               }}
             >
               <TriangleAlert size={18} style={{ color: 'hsl(38, 95%, 60%)', flexShrink: 0 }} />
@@ -141,15 +142,16 @@ export default function Home() {
               style={{
                 background: 'hsl(225, 25%, 12%, 0.95)',
                 border: '1px solid hsl(210, 100%, 60%, 0.6)',
-                borderRadius: 'var(--toast-border-radius, 0.5rem)',
-                padding: 'var(--toast-padding, 1rem)',
+                borderRadius: '0.5rem',
+                padding: '0.875rem 1rem',
                 color: 'hsl(210, 40%, 92%)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.75rem',
                 boxShadow: '0 0 12px hsl(210, 100%, 60%, 0.3), 0 0 4px hsl(210, 100%, 60%, 0.2)',
-                width: 'var(--width)',
-                fontSize: 'var(--toast-font-size, 0.875rem)',
+                fontSize: '0.875rem',
+                minWidth: '356px',
+                maxWidth: '356px',
               }}
             >
               <FilePlus size={18} style={{ color: 'hsl(210, 100%, 60%)', flexShrink: 0 }} />
@@ -199,15 +201,16 @@ export default function Home() {
               style={{
                 background: 'hsl(225, 25%, 12%, 0.95)',
                 border: '1px solid hsl(0, 85%, 60%, 0.6)',
-                borderRadius: 'var(--toast-border-radius, 0.5rem)',
-                padding: 'var(--toast-padding, 1rem)',
+                borderRadius: '0.5rem',
+                padding: '0.875rem 1rem',
                 color: 'hsl(210, 40%, 92%)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.75rem',
                 boxShadow: '0 0 12px hsl(0, 85%, 60%, 0.3), 0 0 4px hsl(0, 85%, 60%, 0.2)',
-                width: 'var(--width)',
-                fontSize: 'var(--toast-font-size, 0.875rem)',
+                fontSize: '0.875rem',
+                minWidth: '356px',
+                maxWidth: '356px',
               }}
             >
               <Trash2 size={18} style={{ color: 'hsl(0, 85%, 60%)', flexShrink: 0 }} />
