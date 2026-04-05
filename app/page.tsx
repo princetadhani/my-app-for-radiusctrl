@@ -9,6 +9,7 @@ import { CommandPalette } from '@/components/command-palette';
 import { ConflictDialog } from '@/components/conflict-dialog';
 import { getFileTree, getSocket, type FileNode } from '@/lib/api';
 import { toast } from 'sonner';
+import { TriangleAlert, FilePlus, Trash2, X } from 'lucide-react';
 
 export default function Home() {
   const [activeFile, setActiveFile] = useState<string>('');
@@ -42,25 +43,182 @@ export default function Home() {
     loadFileTree();
   }, []);
 
-  // Setup WebSocket listeners
+  // Setup WebSocket listeners for file watcher events
   useEffect(() => {
     const socket = getSocket();
 
     socket.on('file:changed', (data: { path: string; message: string }) => {
-      toast.warning(data.message, {
-        action: {
-          label: 'Refresh',
-          onClick: () => window.location.reload(),
-        },
-      });
+      // Extract filename from path
+      const fileName = data.path.split('/').pop() || data.path;
+
+      toast.custom(
+        (t) => (
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => toast.dismiss(t)}
+              style={{
+                position: 'absolute',
+                left: '-12px',
+                top: '-12px',
+                background: 'hsl(225, 25%, 12%)',
+                border: '1px solid hsl(225, 15%, 18%)',
+                borderRadius: '50%',
+                width: '24px',
+                height: '24px',
+                color: 'hsl(210, 40%, 92%)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: 0.8,
+                transition: 'opacity 0.2s',
+                zIndex: 10,
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+              onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.8')}
+            >
+              <X size={14} />
+            </button>
+            <div
+              style={{
+                background: 'hsl(225, 25%, 12%, 0.95)',
+                border: '1px solid hsl(38, 95%, 60%, 0.6)',
+                borderRadius: 'var(--toast-border-radius, 0.5rem)',
+                padding: 'var(--toast-padding, 1rem)',
+                color: 'hsl(210, 40%, 92%)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+                boxShadow: '0 0 12px hsl(38, 95%, 60%, 0.3), 0 0 4px hsl(38, 95%, 60%, 0.2)',
+                width: 'var(--width)',
+                fontSize: 'var(--toast-font-size, 0.875rem)',
+              }}
+            >
+              <TriangleAlert size={18} style={{ color: 'hsl(38, 95%, 60%)', flexShrink: 0 }} />
+              <span>
+                <strong style={{ color: 'hsl(38, 95%, 60%)', fontWeight: 600 }}>{fileName}</strong> edited via SSH.
+              </span>
+            </div>
+          </div>
+        ),
+        { duration: 8000 }
+      );
     });
 
     socket.on('file:added', (data: { path: string; message: string }) => {
-      toast.info(data.message);
+      // Extract filename from path
+      const fileName = data.path.split('/').pop() || data.path;
+
+      toast.custom(
+        (t) => (
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => toast.dismiss(t)}
+              style={{
+                position: 'absolute',
+                left: '-12px',
+                top: '-12px',
+                background: 'hsl(225, 25%, 12%)',
+                border: '1px solid hsl(225, 15%, 18%)',
+                borderRadius: '50%',
+                width: '24px',
+                height: '24px',
+                color: 'hsl(210, 40%, 92%)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: 0.8,
+                transition: 'opacity 0.2s',
+                zIndex: 10,
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+              onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.8')}
+            >
+              <X size={14} />
+            </button>
+            <div
+              style={{
+                background: 'hsl(225, 25%, 12%, 0.95)',
+                border: '1px solid hsl(210, 100%, 60%, 0.6)',
+                borderRadius: 'var(--toast-border-radius, 0.5rem)',
+                padding: 'var(--toast-padding, 1rem)',
+                color: 'hsl(210, 40%, 92%)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+                boxShadow: '0 0 12px hsl(210, 100%, 60%, 0.3), 0 0 4px hsl(210, 100%, 60%, 0.2)',
+                width: 'var(--width)',
+                fontSize: 'var(--toast-font-size, 0.875rem)',
+              }}
+            >
+              <FilePlus size={18} style={{ color: 'hsl(210, 100%, 60%)', flexShrink: 0 }} />
+              <span>
+                <strong style={{ color: 'hsl(210, 100%, 60%)', fontWeight: 600 }}>{fileName}</strong> created via SSH.
+              </span>
+            </div>
+          </div>
+        ),
+        { duration: 8000 }
+      );
     });
 
     socket.on('file:deleted', (data: { path: string; message: string }) => {
-      toast.error(data.message);
+      // Extract filename from path
+      const fileName = data.path.split('/').pop() || data.path;
+
+      toast.custom(
+        (t) => (
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => toast.dismiss(t)}
+              style={{
+                position: 'absolute',
+                left: '-12px',
+                top: '-12px',
+                background: 'hsl(225, 25%, 12%)',
+                border: '1px solid hsl(225, 15%, 18%)',
+                borderRadius: '50%',
+                width: '24px',
+                height: '24px',
+                color: 'hsl(210, 40%, 92%)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: 0.8,
+                transition: 'opacity 0.2s',
+                zIndex: 10,
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+              onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.8')}
+            >
+              <X size={14} />
+            </button>
+            <div
+              style={{
+                background: 'hsl(225, 25%, 12%, 0.95)',
+                border: '1px solid hsl(0, 85%, 60%, 0.6)',
+                borderRadius: 'var(--toast-border-radius, 0.5rem)',
+                padding: 'var(--toast-padding, 1rem)',
+                color: 'hsl(210, 40%, 92%)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+                boxShadow: '0 0 12px hsl(0, 85%, 60%, 0.3), 0 0 4px hsl(0, 85%, 60%, 0.2)',
+                width: 'var(--width)',
+                fontSize: 'var(--toast-font-size, 0.875rem)',
+              }}
+            >
+              <Trash2 size={18} style={{ color: 'hsl(0, 85%, 60%)', flexShrink: 0 }} />
+              <span>
+                <strong style={{ color: 'hsl(0, 85%, 60%)', fontWeight: 600 }}>{fileName}</strong> deleted via SSH.
+              </span>
+            </div>
+          </div>
+        ),
+        { duration: 8000 }
+      );
     });
 
     return () => {
