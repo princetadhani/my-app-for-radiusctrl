@@ -7,6 +7,7 @@ import { getFileContent, saveFile } from '@/lib/api';
 import { customToast } from '@/lib/custom-toast';
 import { EditorTopBar } from '@/components/editor-top-bar';
 import { EditorEmptyState } from '@/components/editor-empty-state';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 
 interface EditorPanelProps {
   filePath: string;
@@ -19,6 +20,7 @@ export function EditorPanel({ filePath, onConflict }: EditorPanelProps) {
   const [isModified, setIsModified] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [mtime, setMtime] = useState<number | null>(null);
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const editorRef = useRef<any>(null);
 
   useEffect(() => {
@@ -229,15 +231,18 @@ export function EditorPanel({ filePath, onConflict }: EditorPanelProps) {
     }
   };
 
-  const handleReset = () => {
-    if (confirm('Are you sure you want to reset all changes?')) {
-      // Reload file content
-      getFileContent(filePath).then(data => {
-        setContent(data.content);
-        setIsModified(false);
-        customToast.success('Changes reset');
-      });
-    }
+  const handleResetClick = () => {
+    setIsResetDialogOpen(true);
+  };
+
+  const handleResetConfirm = () => {
+    // Reload file content
+    getFileContent(filePath).then(data => {
+      setContent(data.content);
+      setIsModified(false);
+      customToast.success('Changes reset');
+    });
+    setIsResetDialogOpen(false);
   };
 
   return (
@@ -248,7 +253,7 @@ export function EditorPanel({ filePath, onConflict }: EditorPanelProps) {
         fileName={filePath.split('/').pop()}
         isModified={isModified}
         onCopy={handleCopyPath}
-        onReset={handleReset}
+        onReset={handleResetClick}
         onSave={handleSaveFile}
         isSaving={isSaving}
       />
@@ -310,6 +315,18 @@ export function EditorPanel({ filePath, onConflict }: EditorPanelProps) {
           }}
         />
       </div>
+
+      {/* Reset Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={isResetDialogOpen}
+        onClose={() => setIsResetDialogOpen(false)}
+        onConfirm={handleResetConfirm}
+        title="Reset Changes"
+        description={`Are you sure you want to reset all changes to "${filePath.split('/').pop()}"? This will discard all unsaved modifications.`}
+        confirmText="Reset"
+        cancelText="Cancel"
+        variant="warning"
+      />
     </div>
   );
 }
