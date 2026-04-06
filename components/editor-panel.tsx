@@ -122,6 +122,10 @@ export function EditorPanel({ filePath, onConflict, deployConsoleRef }: EditorPa
         console.log('✅ File saved and validated successfully');
         setMtime(result.mtime || Date.now());
         setIsModified(false);
+        // Reset console back to deploy mode after successful save
+        if (deployConsoleRef?.current) {
+          deployConsoleRef.current.resetToDeployMode();
+        }
         customToast.success('Configuration saved and service reloaded');
       }
     } catch (error) {

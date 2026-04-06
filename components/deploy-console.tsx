@@ -19,9 +19,10 @@ type ConsoleMode = 'deploy' | 'validation';
 
 export interface DeployConsoleHandle {
   showValidationError: (output: string, error?: string) => void;
+  resetToDeployMode: () => void;
 }
 
-export const DeployConsole = forwardRef<DeployConsoleHandle>((props, ref) => {
+export const DeployConsole = forwardRef<DeployConsoleHandle>((_props, ref) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
@@ -222,9 +223,17 @@ export const DeployConsole = forwardRef<DeployConsoleHandle>((props, ref) => {
         }
 
         await addLine('✗ Configuration validation failed. Changes were not saved.', 'final-error', 400);
+
+        // Auto-minimize after 15 seconds
+        setTimeout(() => {
+          setIsOpen(false);
+        }, 15000);
       } finally {
         setIsRunning(false);
       }
+    },
+    resetToDeployMode: () => {
+      setMode('deploy');
     },
   }));
 
