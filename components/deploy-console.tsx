@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronUp, ChevronDown, Play, Trash2 } from 'lucide-react';
-import { validateConfiguration, reloadService } from '@/lib/api';
+import { validateConfiguration, restartService } from '@/lib/api';
 import { customToast } from '@/lib/custom-toast';
 
 type LineType = 'cmd' | 'info' | 'success' | 'error' | 'final-success' | 'final-error';
@@ -153,18 +153,18 @@ export const DeployConsole = forwardRef<DeployConsoleHandle>((_props, ref) => {
 
       await addLine('Configuration appears to be OK', 'success', 400);
 
-      // Step 3: Reload service
-      await addLine('$ systemctl reload freeradius', 'cmd', 500);
-      await addLine('Reloading FreeRADIUS service...', 'info', 300);
+      // Step 3: Restart service
+      await addLine('$ systemctl restart freeradius', 'cmd', 500);
+      await addLine('Restarting FreeRADIUS service...', 'info', 300);
 
-      const reloadResult = await reloadService();
+      const restartResult = await restartService();
 
-      if (reloadResult.success) {
-        await addLine('✓ Deploy complete. Service reloaded successfully.', 'final-success', 500);
+      if (restartResult.success) {
+        await addLine('✓ Deploy complete. Service restarted successfully.', 'final-success', 500);
         customToast.success('Configuration deployed successfully');
       } else {
-        await addLine('✗ Failed to reload service: ' + reloadResult.message, 'final-error', 300);
-        customToast.error('Failed to reload service');
+        await addLine('✗ Failed to restart service: ' + restartResult.message, 'final-error', 300);
+        customToast.error('Failed to restart service');
       }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
