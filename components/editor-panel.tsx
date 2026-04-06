@@ -23,6 +23,24 @@ export function EditorPanel({ filePath, onConflict }: EditorPanelProps) {
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const editorRef = useRef<any>(null);
 
+  // Use refs to always have access to latest values in keyboard shortcuts
+  const contentRef = useRef<string>(content);
+  const mtimeRef = useRef<number | null>(mtime);
+  const filePathRef = useRef<string>(filePath);
+
+  // Keep refs in sync with state
+  useEffect(() => {
+    contentRef.current = content;
+  }, [content]);
+
+  useEffect(() => {
+    mtimeRef.current = mtime;
+  }, [mtime]);
+
+  useEffect(() => {
+    filePathRef.current = filePath;
+  }, [filePath]);
+
   useEffect(() => {
     const loadFile = async () => {
       setIsLoading(true);
@@ -63,19 +81,26 @@ export function EditorPanel({ filePath, onConflict }: EditorPanelProps) {
     }
   }, [filePath]);
 
+  // Updated handleSaveFile to use refs for latest values
+  // This prevents stale closure issues with keyboard shortcuts
   const handleSaveFile = useCallback(async (forceOrEvent?: boolean | any) => {
     // Handle both direct calls and event handler calls
     const force = typeof forceOrEvent === 'boolean' ? forceOrEvent : false;
 
+    // Use refs to get the LATEST values (not stale closure values)
+    const currentFilePath = filePathRef.current;
+    const currentContent = contentRef.current;
+    const currentMtime = mtimeRef.current;
+
     setIsSaving(true);
-    console.log('💾 Saving file:', filePath, 'Content length:', content.length, 'mtime:', mtime, 'force:', force);
+    console.log('💾 Saving file:', currentFilePath, 'Content length:', currentContent.length, 'mtime:', currentMtime, 'force:', force);
     try {
-      const result = await saveFile(filePath, content, mtime, force);
+      const result = await saveFile(currentFilePath, currentContent, currentMtime, force);
       console.log('💾 Save result:', result);
 
       if (result.status === 'conflict' && result.disk_content) {
         console.warn('⚠️  Conflict detected');
-        onConflict?.(result.disk_content, content);
+        onConflict?.(result.disk_content, currentContent);
         customToast.warning('File was modified externally. Please resolve the conflict.');
       } else if (result.status === 'success') {
         console.log('✅ File saved successfully');
@@ -89,19 +114,10 @@ export function EditorPanel({ filePath, onConflict }: EditorPanelProps) {
     } finally {
       setIsSaving(false);
     }
-  }, [filePath, content, mtime, onConflict]);
+  }, [onConflict]); // Only onConflict in dependencies now
 
-  useEffect(() => {
-    const handleSave = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
-        e.preventDefault();
-        handleSaveFile();
-      }
-    };
-
-    document.addEventListener('keydown', handleSave);
-    return () => document.removeEventListener('keydown', handleSave);
-  }, [handleSaveFile]);
+  // Note: We removed the document-level keyboard listener to avoid conflicts
+  // Monaco editor has its own keyboard shortcut system (see handleEditorDidMount)
 
   const handleEditorChange = (value: string | undefined) => {
     setContent(value || '');

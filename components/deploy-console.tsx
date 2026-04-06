@@ -86,8 +86,8 @@ export function DeployConsole() {
     setLines([]);
 
     try {
-      // Step 1: Show command
-      await addLine('$ freeradius -C -D /etc/freeradius/3.0/', 'cmd', 0);
+      // Step 1: Show command (matches backend actual command)
+      await addLine('$ freeradius -CX /etc/freeradius/3.0', 'cmd', 0);
       await addLine('Validating configuration...', 'info', 400);
 
       // Step 2: Validate configuration
