@@ -8,13 +8,15 @@ import { customToast } from '@/lib/custom-toast';
 import { EditorTopBar } from '@/components/editor-top-bar';
 import { EditorEmptyState } from '@/components/editor-empty-state';
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import type { DeployConsoleHandle } from '@/components/deploy-console';
 
 interface EditorPanelProps {
   filePath: string;
   onConflict?: (diskContent: string, localContent: string) => void;
+  deployConsoleRef?: React.RefObject<DeployConsoleHandle>;
 }
 
-export function EditorPanel({ filePath, onConflict }: EditorPanelProps) {
+export function EditorPanel({ filePath, onConflict, deployConsoleRef }: EditorPanelProps) {
   const [content, setContent] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isModified, setIsModified] = useState(false);
@@ -102,11 +104,25 @@ export function EditorPanel({ filePath, onConflict }: EditorPanelProps) {
         console.warn('⚠️  Conflict detected');
         onConflict?.(result.disk_content, currentContent);
         customToast.warning('File was modified externally. Please resolve the conflict.');
+      } else if (result.status === 'validation_failed') {
+        console.warn('⚠️  Validation failed');
+        // Update mtime to match rolled-back file on disk
+        if (result.mtime) {
+          setMtime(result.mtime);
+        }
+        // Open deploy console with validation errors
+        if (deployConsoleRef?.current) {
+          deployConsoleRef.current.showValidationError(
+            result.validationOutput || '',
+            result.validationError
+          );
+        }
+        customToast.error('Configuration validation failed. Changes were not saved.');
       } else if (result.status === 'success') {
-        console.log('✅ File saved successfully');
+        console.log('✅ File saved and validated successfully');
         setMtime(result.mtime || Date.now());
         setIsModified(false);
-        customToast.success('File saved successfully');
+        customToast.success('Configuration saved and service reloaded');
       }
     } catch (error) {
       console.error('❌ Save error:', error);

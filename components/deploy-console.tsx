@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronUp, ChevronDown, Play, Trash2 } from 'lucide-react';
 import { validateConfiguration, reloadService } from '@/lib/api';
@@ -15,11 +15,18 @@ interface AnimatedLine {
   isComplete: boolean;
 }
 
-export function DeployConsole() {
+type ConsoleMode = 'deploy' | 'validation';
+
+export interface DeployConsoleHandle {
+  showValidationError: (output: string, error?: string) => void;
+}
+
+export const DeployConsole = forwardRef<DeployConsoleHandle>((props, ref) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
   const [lines, setLines] = useState<AnimatedLine[]>([]);
+  const [mode, setMode] = useState<ConsoleMode>('deploy');
   const consoleRef = useRef<HTMLDivElement>(null);
   const animationRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -80,6 +87,7 @@ export function DeployConsole() {
   };
 
   const handleDeploy = async () => {
+    setMode('deploy');
     setIsOpen(true);
     setIsValidating(true);
     setIsRunning(true);
@@ -170,6 +178,56 @@ export function DeployConsole() {
     setLines([]);
   };
 
+  // Expose methods for external control
+  useImperativeHandle(ref, () => ({
+    showValidationError: async (output: string, error?: string) => {
+      setMode('validation');
+      setIsOpen(true);
+      setIsRunning(true);
+      setLines([]);
+
+      try {
+        // Show command
+        await addLine('$ freeradius -CX /etc/freeradius/3.0', 'cmd', 0);
+        await addLine('Validating configuration...', 'info', 400);
+        await addLine('ERROR: Configuration validation failed', 'error', 200);
+
+        // Show the actual error message
+        if (error) {
+          const errorLines = error.split('\n').filter(line => line.trim());
+          for (const line of errorLines) {
+            await addLine(line.trim(), 'error', 100);
+          }
+        }
+
+        // Also show key lines from full output if available
+        if (output && !error) {
+          const errorLines = output
+            .split('\n')
+            .filter(line =>
+              line.includes('Parse error') ||
+              line.includes('Unknown') ||
+              line.includes('Duplicate') ||
+              line.includes('Failed') ||
+              line.includes('ERROR') ||
+              line.includes('Unable to') ||
+              line.includes('Permission denied') ||
+              line.includes('error:')
+            )
+            .slice(0, 15);
+
+          for (const line of errorLines) {
+            await addLine(line.trim(), 'error', 100);
+          }
+        }
+
+        await addLine('✗ Configuration validation failed. Changes were not saved.', 'final-error', 400);
+      } finally {
+        setIsRunning(false);
+      }
+    },
+  }));
+
   const getOutputClass = (type: LineType) => {
     switch (type) {
       case 'cmd':
@@ -205,7 +263,7 @@ export function DeployConsole() {
             )}
           </button>
           <span className="text-xs font-mono font-semibold text-foreground">
-            DEPLOY CONSOLE
+            {mode === 'validation' ? 'CONFIG TEST CONSOLE' : 'DEPLOY CONSOLE'}
           </span>
           <div className={`h-1.5 w-1.5 rounded-full transition-colors ${isRunning ? 'bg-neon-green animate-pulse-green' : 'bg-muted'
             }`} />
@@ -222,31 +280,33 @@ export function DeployConsole() {
             <Trash2 className="h-4 w-4" />
           </button>
 
-          {/* Deploy/Apply Button - Matching Send button shape */}
-          <button
-            onClick={handleDeploy}
-            disabled={isRunning}
-            className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold transition-all relative overflow-hidden group disabled:opacity-40 disabled:cursor-not-allowed"
-            style={{
-              background: !isRunning
-                ? 'linear-gradient(135deg, rgba(158, 206, 106, 0.2), rgba(158, 206, 106, 0.15))'
-                : 'rgba(139, 148, 158, 0.1)',
-              border: !isRunning
-                ? '1px solid rgba(158, 206, 106, 0.4)'
-                : '1px solid rgba(139, 148, 158, 0.2)',
-              color: !isRunning ? '#9ece6a' : '#8b949e',
-              boxShadow: !isRunning ? '0 0 12px rgba(158, 206, 106, 0.3)' : 'none',
-            }}
-          >
-            {/* Shimmer effect */}
-            {!isRunning && (
-              <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-            )}
-            <Play className={`h-3.5 w-3.5 relative z-10 ${isRunning ? 'animate-pulse' : ''}`} />
-            <span className="relative z-10">
-              {isValidating ? 'Validating...' : isRunning ? 'Deploying...' : 'Apply & Deploy'}
-            </span>
-          </button>
+          {/* Deploy/Apply Button - Hidden in validation mode */}
+          {mode === 'deploy' && (
+            <button
+              onClick={handleDeploy}
+              disabled={isRunning}
+              className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold transition-all relative overflow-hidden group disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{
+                background: !isRunning
+                  ? 'linear-gradient(135deg, rgba(158, 206, 106, 0.2), rgba(158, 206, 106, 0.15))'
+                  : 'rgba(139, 148, 158, 0.1)',
+                border: !isRunning
+                  ? '1px solid rgba(158, 206, 106, 0.4)'
+                  : '1px solid rgba(139, 148, 158, 0.2)',
+                color: !isRunning ? '#9ece6a' : '#8b949e',
+                boxShadow: !isRunning ? '0 0 12px rgba(158, 206, 106, 0.3)' : 'none',
+              }}
+            >
+              {/* Shimmer effect */}
+              {!isRunning && (
+                <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+              )}
+              <Play className={`h-3.5 w-3.5 relative z-10 ${isRunning ? 'animate-pulse' : ''}`} />
+              <span className="relative z-10">
+                {isValidating ? 'Validating...' : isRunning ? 'Deploying...' : 'Apply & Deploy'}
+              </span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -289,5 +349,6 @@ export function DeployConsole() {
       </AnimatePresence>
     </div>
   );
-}
+});
 
+DeployConsole.displayName = 'DeployConsole';

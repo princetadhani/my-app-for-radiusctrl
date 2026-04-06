@@ -6,6 +6,8 @@ import { promisify } from 'util';
 import * as Diff from 'diff';
 import config from '../config';
 import logger from '../utils/logger';
+import { validateConfiguration } from './validationService';
+import { reloadService } from './serviceStatusService';
 
 const execAsync = promisify(exec);
 
@@ -22,11 +24,13 @@ export interface FileContentResponse {
 }
 
 export interface SaveFileResponse {
-  status: 'success' | 'conflict';
+  status: 'success' | 'conflict' | 'validation_failed';
   mtime?: number;
   disk_content?: string;
   message?: string;
   diff?: string;
+  validationOutput?: string;
+  validationError?: string;
 }
 
 /**
@@ -86,8 +90,10 @@ export async function getFileContent(filePath: string): Promise<FileContentRespo
 }
 
 /**
- * Save file with conflict detection
+ * Save file with conflict detection, validation, and service reload
  * Uses shadow buffer logic - compares mtime to detect external changes
+ * Validates configuration before saving
+ * Reloads service if validation passes
  * Preserves original file ownership and permissions
  */
 export async function saveFile(
@@ -123,29 +129,70 @@ export async function saveFile(
       }
     }
 
-    // Write file content
-    // User should be in freerad group with write permissions (664)
+    // Step 1: Save the original file content for rollback
+    const originalContent = await fs.readFile(filePath, 'utf-8');
+
+    // Step 2: Write new file content
     await fs.writeFile(filePath, content, 'utf-8');
 
     // Preserve original ownership and permissions
-    // This is critical to maintain FreeRADIUS security model
     try {
       await fs.chown(filePath, originalStats.uid, originalStats.gid);
       await fs.chmod(filePath, originalStats.mode);
     } catch (chownError: any) {
-      // If chown fails (user not owner), that's okay as long as write succeeded
-      // The file will retain the writer's ownership but correct permissions
       logger.warn(`Could not preserve ownership for ${filePath}: ${chownError.message}`);
+    }
+
+    // Step 3: Validate configuration
+    logger.info(`Validating configuration after saving ${filePath}...`);
+    const validation = await validateConfiguration(config.freeradius.baseDir);
+
+    if (!validation.success) {
+      // Validation failed - rollback the file
+      logger.warn(`Validation failed after saving ${filePath}, rolling back...`);
+      await fs.writeFile(filePath, originalContent, 'utf-8');
+
+      // Restore ownership and permissions again
+      try {
+        await fs.chown(filePath, originalStats.uid, originalStats.gid);
+        await fs.chmod(filePath, originalStats.mode);
+      } catch (chownError: any) {
+        logger.warn(`Could not preserve ownership during rollback for ${filePath}: ${chownError.message}`);
+      }
+
+      // Get the new mtime after rollback so frontend can sync
+      const rolledBackStats = await fs.stat(filePath);
+
+      logger.info(`File rolled back to original content: ${filePath}`);
+
+      return {
+        status: 'validation_failed',
+        message: 'Configuration validation failed',
+        validationOutput: validation.output,
+        validationError: validation.error,
+        mtime: rolledBackStats.mtimeMs, // Return new mtime after rollback
+      };
+    }
+
+    // Step 4: Validation passed - reload service
+    logger.info('Configuration validation passed, reloading service...');
+    const reloadResult = await reloadService();
+
+    if (!reloadResult.success) {
+      logger.warn(`Service reload failed: ${reloadResult.message}`);
+      // Don't rollback - config is valid, just reload failed
+    } else {
+      logger.info('Service reloaded successfully');
     }
 
     const newStats = await fs.stat(filePath);
 
-    logger.info(`File saved successfully: ${filePath} (mode: ${originalStats.mode.toString(8)})`);
+    logger.info(`File saved, validated, and service reloaded: ${filePath} (mode: ${originalStats.mode.toString(8)})`);
 
     return {
       status: 'success',
       mtime: newStats.mtimeMs,
-      message: 'File saved successfully',
+      message: 'File saved, validated, and service reloaded successfully',
     };
   } catch (error: any) {
     logger.error(`Error saving file ${filePath}: ${error.message}`);

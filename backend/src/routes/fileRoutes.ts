@@ -26,7 +26,7 @@ router.get('/tree', async (req, res, next) => {
 router.post('/content', async (req, res, next) => {
   try {
     const { path } = req.body;
-    
+
     if (!path) {
       return res.status(400).json({ error: 'Path is required' });
     }
@@ -45,31 +45,12 @@ router.post('/content', async (req, res, next) => {
 router.post('/save', async (req, res, next) => {
   try {
     const { path, content, mtime, force } = req.body;
-    
+
     if (!path || content === undefined) {
       return res.status(400).json({ error: 'Path and content are required' });
     }
 
     const result = await fileService.saveFile(path, content, mtime || null, force || false);
-    res.json(result);
-  } catch (error) {
-    next(error);
-  }
-});
-
-/**
- * POST /api/files/save-and-validate
- * Safe-save with validation and deployment
- */
-router.post('/save-and-validate', async (req, res, next) => {
-  try {
-    const { path, content } = req.body;
-    
-    if (!path || content === undefined) {
-      return res.status(400).json({ error: 'Path and content are required' });
-    }
-
-    const result = await validationService.safeSaveAndValidate(path, content);
     res.json(result);
   } catch (error) {
     next(error);

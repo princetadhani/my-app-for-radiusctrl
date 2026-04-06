@@ -1,5 +1,3 @@
-import fs from 'fs/promises';
-import path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import config from '../config';
@@ -11,43 +9,6 @@ export interface ValidationResult {
   success: boolean;
   output: string;
   error?: string;
-}
-
-export interface DeployResult {
-  success: boolean;
-  message: string;
-  validationOutput?: string;
-  error?: string;
-}
-
-/**
- * Copy directory recursively for testing
- * Creates a temporary copy with safe permissions for validation
- * IMPORTANT: This copy is ONLY for testing - never copy back to production!
- */
-async function copyDirectory(src: string, dest: string): Promise<void> {
-  // Create destination directory with readable permissions
-  await fs.mkdir(dest, { recursive: true, mode: 0o755 });
-  const entries = await fs.readdir(src, { withFileTypes: true });
-
-  for (const entry of entries) {
-    const srcPath = path.join(src, entry.name);
-    const destPath = path.join(dest, entry.name);
-
-    if (entry.isDirectory()) {
-      await copyDirectory(srcPath, destPath);
-    } else {
-      // Copy file content
-      await fs.copyFile(srcPath, destPath);
-
-      // Set safe permissions on temp copy (readable for testing)
-      // We use 644 because:
-      // 1. This is a temp directory for validation only
-      // 2. FreeRADIUS needs to read these files during validation
-      // 3. We NEVER copy this back to production
-      await fs.chmod(destPath, 0o644);
-    }
-  }
 }
 
 /**
@@ -154,88 +115,6 @@ export async function validateConfiguration(configDir: string): Promise<Validati
       success: false,
       output: '',
       error: error.stderr || error.message || 'Validation failed with no output',
-    };
-  }
-}
-
-/**
- * Safe-Save Implementation with Atomic Copy & Validation
- * 1. Atomic Copy: Copy entire config to /tmp/radius_test/
- * 2. Apply Change: Write edited file to test directory
- * 3. Validate: Run freeradius -C on test directory
- * 4. Swap: If validation passes, copy file to live directory
- */
-export async function safeSaveAndValidate(
-  filePath: string,
-  content: string
-): Promise<DeployResult> {
-  const testDir = '/tmp/radius_test';
-  const baseDir = config.freeradius.baseDir;
-  const relativePath = path.relative(baseDir, filePath);
-
-  try {
-    // Step 1: Atomic Copy - Copy entire config to test directory
-    logger.info('Step 1: Copying configuration to test directory...');
-    await fs.rm(testDir, { recursive: true, force: true });
-    await copyDirectory(baseDir, testDir);
-
-    // Step 2: Apply Change - Write edited file to test directory
-    logger.info('Step 2: Applying changes to test directory...');
-    const testFilePath = path.join(testDir, relativePath);
-    await fs.writeFile(testFilePath, content, 'utf-8');
-
-    // Step 3: Validate - Run freeradius -C
-    logger.info('Step 3: Validating configuration...');
-    const validation = await validateConfiguration(testDir);
-
-    if (!validation.success) {
-      logger.warn('Validation failed, changes not applied');
-      return {
-        success: false,
-        message: 'Configuration validation failed',
-        validationOutput: validation.output,
-        error: validation.error,
-      };
-    }
-
-    // Step 4: Swap - Deploy validated file to production
-    logger.info('Step 4: Deploying validated configuration...');
-
-    // Get original file stats to preserve ownership and permissions
-    const originalStats = await fs.stat(filePath);
-
-    // Write the new content
-    await fs.writeFile(filePath, content, 'utf-8');
-
-    // Restore original ownership and permissions
-    // This is important when running as a user in freerad group
-    await fs.chown(filePath, originalStats.uid, originalStats.gid);
-    await fs.chmod(filePath, originalStats.mode);
-
-    logger.info(`File deployed with preserved permissions: ${originalStats.mode.toString(8)}`);
-
-    // Cleanup test directory
-    await fs.rm(testDir, { recursive: true, force: true });
-
-    logger.info('Safe-save completed successfully');
-
-    return {
-      success: true,
-      message: 'Configuration validated and deployed successfully',
-      validationOutput: validation.output,
-    };
-  } catch (error: any) {
-    logger.error(`Safe-save error: ${error.message}`);
-
-    // Cleanup test directory on error
-    try {
-      await fs.rm(testDir, { recursive: true, force: true });
-    } catch { }
-
-    return {
-      success: false,
-      message: 'Failed to deploy configuration',
-      error: error.message,
     };
   }
 }

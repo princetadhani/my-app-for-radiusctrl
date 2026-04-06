@@ -49,11 +49,13 @@ export interface FileContentResponse {
 }
 
 export interface SaveFileResponse {
-  status: 'success' | 'conflict';
+  status: 'success' | 'conflict' | 'validation_failed';
   mtime?: number;
   disk_content?: string;
   message?: string;
   diff?: string;
+  validationOutput?: string;
+  validationError?: string;
 }
 
 export interface RadiusStatus {
@@ -125,21 +127,6 @@ export async function saveFile(
   });
   if (!res.ok) {
     throw new Error(`Failed to save file: ${res.status}`);
-  }
-  return await res.json();
-}
-
-export async function saveAndValidate(
-  path: string,
-  content: string
-): Promise<{ success: boolean; message: string; validationOutput?: string; error?: string }> {
-  const res = await fetch(`${API_BASE_URL}/api/files/save-and-validate`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ path, content }),
-  });
-  if (!res.ok) {
-    throw new Error(`Failed to save and validate: ${res.status}`);
   }
   return await res.json();
 }

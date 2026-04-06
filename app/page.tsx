@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { StatusHeader } from '@/components/status-header';
 import { FileTree } from '@/components/file-tree';
 import { EditorPanel } from '@/components/editor-panel';
-import { DeployConsole } from '@/components/deploy-console';
+import { DeployConsole, type DeployConsoleHandle } from '@/components/deploy-console';
 import { CommandPalette } from '@/components/command-palette';
 import { ConflictDialog } from '@/components/conflict-dialog';
 import { getFileTree, getSocket, type FileNode } from '@/lib/api';
@@ -25,6 +25,7 @@ export default function Home() {
     diskContent: '',
     localContent: '',
   });
+  const deployConsoleRef = useRef<DeployConsoleHandle>(null);
 
   // Load file tree on mount
   useEffect(() => {
@@ -265,11 +266,15 @@ export default function Home() {
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* Editor Panel */}
           <div className="flex-1 min-h-0 overflow-hidden">
-            <EditorPanel filePath={activeFile} onConflict={handleConflict} />
+            <EditorPanel
+              filePath={activeFile}
+              onConflict={handleConflict}
+              deployConsoleRef={deployConsoleRef}
+            />
           </div>
 
           {/* Deploy Console */}
-          <DeployConsole />
+          <DeployConsole ref={deployConsoleRef} />
         </div>
       </div>
 
