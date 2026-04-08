@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { StatusHeader } from '@/components/status-header';
 import { FileTree } from '@/components/file-tree';
 import { EditorPanel } from '@/components/editor-panel';
@@ -18,6 +19,8 @@ export default function Home() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isNewUserDialogOpen, setIsNewUserDialogOpen] = useState(false);
   const deployConsoleRef = useRef<DeployConsoleHandle>(null);
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
   // Load file tree on mount
   useEffect(() => {
@@ -228,13 +231,29 @@ export default function Home() {
     };
   }, []);
 
+  // Check for URL parameter to open New User dialog
+  useEffect(() => {
+    const openNewUser = searchParams.get('openNewUser');
+    if (openNewUser === 'true') {
+      setIsNewUserDialogOpen(true);
+      // Remove the parameter from URL
+      router.replace('/');
+    }
+  }, [searchParams, router]);
+
   const handleNewUserSuccess = async (username: string) => {
     customToast.success(`User "${username}" created successfully`);
+
     // Reload file tree immediately to show new file in command palette
     try {
       const updatedTree = await getFileTree();
       setFileTree(updatedTree);
       console.log('File tree refreshed after user creation');
+
+      // Automatically open the newly created user file in editor
+      const userFilePath = `/etc/freeradius/3.0/mods-config/files/users.d/${username}`;
+      setActiveFile(userFilePath);
+      console.log('Opened newly created user file:', userFilePath);
     } catch (error) {
       console.error('Failed to refresh file tree:', error);
     }

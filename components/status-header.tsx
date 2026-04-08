@@ -5,6 +5,7 @@ import { Radio, Command, Activity, Scroll, Wifi, Shield, User, UserPlus } from '
 import { useEffect, useState } from 'react';
 import { getRadiusStatus } from '@/lib/api';
 import Link from 'next/link';
+import { useRouter, usePathname } from 'next/navigation';
 
 interface StatusHeaderProps {
   currentFile?: string;
@@ -14,6 +15,18 @@ interface StatusHeaderProps {
 export function StatusHeader({ currentFile, onNewUserClick }: StatusHeaderProps) {
   const [status, setStatus] = useState<'running' | 'stopped' | 'unknown'>('running');
   const [requestsPerSecond, setRequestsPerSecond] = useState(0);
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const handleNewUserClick = () => {
+    // If not on home page, navigate to home with dialog trigger
+    if (pathname !== '/') {
+      router.push('/?openNewUser=true');
+    } else {
+      // Already on home page, just open dialog
+      onNewUserClick?.();
+    }
+  };
 
   useEffect(() => {
     const fetchStatus = async () => {
@@ -103,7 +116,7 @@ export function StatusHeader({ currentFile, onNewUserClick }: StatusHeaderProps)
         <nav className="hidden md:flex items-center gap-3">
           {/* New User Button */}
           <button
-            onClick={onNewUserClick}
+            onClick={handleNewUserClick}
             className="flex items-center gap-1.5 px-2 py-1 rounded transition-all duration-200 text-xs"
             style={{
               fontFamily: 'var(--font-inter)',
