@@ -6,7 +6,6 @@ import { FileTree } from '@/components/file-tree';
 import { EditorPanel } from '@/components/editor-panel';
 import { DeployConsole, type DeployConsoleHandle } from '@/components/deploy-console';
 import { CommandPalette } from '@/components/command-palette';
-import { ConflictDialog } from '@/components/conflict-dialog';
 import { getFileTree, getSocket, type FileNode } from '@/lib/api';
 import { toast } from 'sonner';
 import { customToast } from '@/lib/custom-toast';
@@ -16,15 +15,6 @@ export default function Home() {
   const [activeFile, setActiveFile] = useState<string>('');
   const [fileTree, setFileTree] = useState<FileNode[]>([]);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [conflictDialog, setConflictDialog] = useState<{
-    isOpen: boolean;
-    diskContent: string;
-    localContent: string;
-  }>({
-    isOpen: false,
-    diskContent: '',
-    localContent: '',
-  });
   const deployConsoleRef = useRef<DeployConsoleHandle>(null);
 
   // Load file tree on mount
@@ -233,19 +223,6 @@ export default function Home() {
     };
   }, []);
 
-  const handleConflict = (diskContent: string, localContent: string) => {
-    setConflictDialog({
-      isOpen: true,
-      diskContent,
-      localContent,
-    });
-  };
-
-  const handleForceOverwrite = () => {
-    // In a real app, this would trigger a force save
-    console.log('Force overwrite');
-  };
-
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       {/* Header */}
@@ -268,7 +245,6 @@ export default function Home() {
           <div className="flex-1 min-h-0 overflow-hidden">
             <EditorPanel
               filePath={activeFile}
-              onConflict={handleConflict}
               deployConsoleRef={deployConsoleRef}
             />
           </div>
@@ -280,16 +256,6 @@ export default function Home() {
 
       {/* Command Palette */}
       <CommandPalette onFileSelect={setActiveFile} />
-
-      {/* Conflict Dialog */}
-      <ConflictDialog
-        isOpen={conflictDialog.isOpen}
-        onClose={() => setConflictDialog(prev => ({ ...prev, isOpen: false }))}
-        onForceOverwrite={handleForceOverwrite}
-        diskContent={conflictDialog.diskContent}
-        localContent={conflictDialog.localContent}
-        filePath={activeFile}
-      />
     </div>
   );
 }

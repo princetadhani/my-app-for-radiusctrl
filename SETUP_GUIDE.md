@@ -31,8 +31,7 @@ A modern, production-ready web interface for managing FreeRADIUS configuration w
 - Browse `/etc/freeradius/3.0/` directory tree
 - Edit configuration files with Monaco editor
 - Syntax highlighting and validation
-- **Shadow Buffer**: Detects concurrent modifications (SSH vs UI)
-- Real-time notifications when files change externally
+- Real-time notifications when files change externally via SSH
 
 ### ✅ Safe Deployment
 - **Atomic Copy & Validate**: Test changes in isolated directory
@@ -178,31 +177,37 @@ pm2 start npm --name freeradius-frontend -- start
 
 1. **Browse Files**: Use sidebar to navigate `/etc/freeradius/3.0/`
 2. **Edit**: Click file to open in Monaco editor
-3. **Save**: Click "Save" or press Ctrl+S
-4. **Deploy**: Click "Save & Validate" to run validation before saving
-5. **Sync**: If file modified externally (SSH), you'll see notification with "Sync" button
+3. **Save**: Press Ctrl+S or click Save button
+4. **Validation**: Every save automatically validates configuration
+5. **SSH Notifications**: If file modified externally via SSH, you'll see a toast notification
 
-### Concurrent Access Handling
+### Save & Validation Flow
 
-**Scenario**: User A edits via UI, User B edits via SSH
+**Every save automatically validates the configuration:**
 
-1. User A opens file, gets mtime = 1000
-2. User B saves via SSH, mtime changes to 2000
-3. User A clicks "Save"
-4. Backend detects mtime mismatch → returns conflict
-5. UI shows diff dialog with:
-   - Disk version (User B's changes)
-   - Local version (User A's changes)
-   - Options: Cancel or Force Overwrite
+1. **User presses Save (Ctrl+S)**
+2. Backend saves file to disk
+3. Runs `freeradius -C` validation
+4. **If validation passes**:
+   - Service reloads automatically
+   - Toast: "Configuration saved and service reloaded"
+5. **If validation fails**:
+   - File is rolled back to original content
+   - Console opens with validation errors
+   - Toast: "Configuration validation failed. Changes were not saved."
+   - User can fix the error and save again
 
-### Safe-Save Flow
+### External File Monitoring
 
-1. **User clicks "Save & Validate"**
-2. Backend copies `/etc/freeradius/3.0/` → `/tmp/radius_test/`
-3. Applies user's changes to test directory
-4. Runs `freeradius -C -d /tmp/radius_test/`
-5. If validation **passes**: Copy to production + reload service
-6. If validation **fails**: Show error, discard changes
+**When files are modified via SSH:**
+
+- File watcher detects the change
+- Toast notification appears: "[filename] edited via SSH"
+- Color-coded notifications:
+  - Yellow/amber: File modified
+  - Blue: File created
+  - Red: File deleted
+- No conflict dialogs - you can continue editing normally
 
 ### Log Streaming
 

@@ -49,11 +49,9 @@ export interface FileContentResponse {
 }
 
 export interface SaveFileResponse {
-  status: 'success' | 'conflict' | 'validation_failed';
+  status: 'success' | 'validation_failed';
   mtime?: number;
-  disk_content?: string;
   message?: string;
-  diff?: string;
   validationOutput?: string;
   validationError?: string;
 }

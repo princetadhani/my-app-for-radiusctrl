@@ -12,11 +12,10 @@ import type { DeployConsoleHandle } from '@/components/deploy-console';
 
 interface EditorPanelProps {
   filePath: string;
-  onConflict?: (diskContent: string, localContent: string) => void;
   deployConsoleRef?: React.RefObject<DeployConsoleHandle>;
 }
 
-export function EditorPanel({ filePath, onConflict, deployConsoleRef }: EditorPanelProps) {
+export function EditorPanel({ filePath, deployConsoleRef }: EditorPanelProps) {
   const [content, setContent] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isModified, setIsModified] = useState(false);
@@ -95,18 +94,17 @@ export function EditorPanel({ filePath, onConflict, deployConsoleRef }: EditorPa
     const currentMtime = mtimeRef.current;
 
     setIsSaving(true);
-    console.log('💾 Saving file:', currentFilePath, 'Content length:', currentContent.length, 'mtime:', currentMtime, 'force:', force);
+    console.log('💾 Saving file:', currentFilePath, 'Content length:', currentContent.length, 'mtime:', currentMtime);
     try {
       const result = await saveFile(currentFilePath, currentContent, currentMtime, force);
       console.log('💾 Save result:', result);
 
-      if (result.status === 'conflict' && result.disk_content) {
-        console.warn('⚠️  Conflict detected');
-        onConflict?.(result.disk_content, currentContent);
-        customToast.warning('File was modified externally. Please resolve the conflict.');
-      } else if (result.status === 'validation_failed') {
+      if (result.status === 'validation_failed') {
         console.warn('⚠️  Validation failed');
         // Update mtime to match rolled-back file on disk
+        // This is critical: when validation fails, the backend rolls back the file
+        // We need to update our mtime to match the rolled-back version
+        // Otherwise the next save attempt would think there's a conflict
         if (result.mtime) {
           setMtime(result.mtime);
         }
@@ -134,7 +132,7 @@ export function EditorPanel({ filePath, onConflict, deployConsoleRef }: EditorPa
     } finally {
       setIsSaving(false);
     }
-  }, [onConflict]); // Only onConflict in dependencies now
+  }, []); // No dependencies needed - we use refs for all values
 
   // Note: We removed the document-level keyboard listener to avoid conflicts
   // Monaco editor has its own keyboard shortcut system (see handleEditorDidMount)

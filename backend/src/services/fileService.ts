@@ -3,7 +3,6 @@ import fsSync from 'fs';
 import path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import * as Diff from 'diff';
 import config from '../config';
 import logger from '../utils/logger';
 import { validateConfiguration } from './validationService';
@@ -24,11 +23,9 @@ export interface FileContentResponse {
 }
 
 export interface SaveFileResponse {
-  status: 'success' | 'conflict' | 'validation_failed';
+  status: 'success' | 'validation_failed';
   mtime?: number;
-  disk_content?: string;
   message?: string;
-  diff?: string;
   validationOutput?: string;
   validationError?: string;
 }
@@ -90,11 +87,15 @@ export async function getFileContent(filePath: string): Promise<FileContentRespo
 }
 
 /**
- * Save file with conflict detection, validation, and service reload
- * Uses shadow buffer logic - compares mtime to detect external changes
+ * Save file with validation and service reload
  * Validates configuration before saving
  * Reloads service if validation passes
  * Preserves original file ownership and permissions
+ *
+ * mtime is tracked for validation rollback purposes:
+ * - If validation fails, file is rolled back to original content
+ * - New mtime after rollback is returned to frontend
+ * - This prevents false positive conflicts on the next save attempt
  */
 export async function saveFile(
   filePath: string,
@@ -105,29 +106,6 @@ export async function saveFile(
   try {
     // Get original file stats for permission preservation
     const originalStats = await fs.stat(filePath);
-
-    // Check if file was modified externally
-    if (!force && clientMtime !== null) {
-      if (originalStats.mtimeMs !== clientMtime) {
-        // File was modified externally - conflict detected
-        const diskContent = await fs.readFile(filePath, 'utf-8');
-        const diff = Diff.createTwoFilesPatch(
-          'Disk Version',
-          'Your Changes',
-          diskContent,
-          content,
-          '',
-          ''
-        );
-
-        return {
-          status: 'conflict',
-          disk_content: diskContent,
-          diff,
-          message: 'File was modified externally',
-        };
-      }
-    }
 
     // Step 1: Save the original file content for rollback
     const originalContent = await fs.readFile(filePath, 'utf-8');

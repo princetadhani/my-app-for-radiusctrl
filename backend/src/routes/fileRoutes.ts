@@ -40,7 +40,8 @@ router.post('/content', async (req, res, next) => {
 
 /**
  * POST /api/files/save
- * Save file with conflict detection
+ * Save file with validation and automatic service reload
+ * If validation fails, file is rolled back to original content
  */
 router.post('/save', async (req, res, next) => {
   try {
