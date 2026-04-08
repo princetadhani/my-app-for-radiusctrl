@@ -121,14 +121,22 @@ export const DeployConsole = forwardRef<DeployConsoleHandle>((_props, ref) => {
           const errorLines = validationResult.output
             .split('\n')
             .filter(line =>
-              line.includes('Parse error') ||
               line.includes('Unknown') ||
               line.includes('Duplicate') ||
               line.includes('Failed') ||
               line.includes('ERROR') ||
               line.includes('Unable to') ||
               line.includes('Permission denied') ||
-              line.includes('error:')
+              line.includes('error:') ||
+              line.includes('Parse error') ||
+              line.includes('Errors reading') ||
+              line.includes('Failed parsing configuration item') ||
+              line.includes('Unknown name') ||
+              line.includes('Instantiation failed') ||
+              line.includes('Duplicate') ||
+              line.includes('Error') ||
+              line.includes('Invalid') ||
+              line.includes('Failed')
             )
             .slice(0, 15); // Show first 15 error lines
 
@@ -206,14 +214,22 @@ export const DeployConsole = forwardRef<DeployConsoleHandle>((_props, ref) => {
           const errorLines = output
             .split('\n')
             .filter(line =>
-              line.includes('Parse error') ||
               line.includes('Unknown') ||
               line.includes('Duplicate') ||
               line.includes('Failed') ||
               line.includes('ERROR') ||
               line.includes('Unable to') ||
               line.includes('Permission denied') ||
-              line.includes('error:')
+              line.includes('error:') ||
+              line.includes('Parse error') ||
+              line.includes('Errors reading') ||
+              line.includes('Failed parsing configuration item') ||
+              line.includes('Unknown name') ||
+              line.includes('Instantiation failed') ||
+              line.includes('Duplicate') ||
+              line.includes('Error') ||
+              line.includes('Invalid') ||
+              line.includes('Failed')
             )
             .slice(0, 15);
 

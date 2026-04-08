@@ -57,7 +57,12 @@ export async function validateConfiguration(configDir: string): Promise<Validati
         line.includes('Parse error') ||
         line.includes('Errors reading') ||
         line.includes('Failed parsing configuration item') ||
-        line.includes('Unknown name')
+        line.includes('Unknown name') ||
+        line.includes('Instantiation failed') ||
+        line.includes('Duplicate') ||
+        line.includes('Error') ||
+        line.includes('Invalid') ||
+        line.includes('Failed')
       ).slice(0, 15);
 
       return {
@@ -74,9 +79,14 @@ export async function validateConfiguration(configDir: string): Promise<Validati
       // Extract error lines
       const errorLines = output.split('\n').filter(line =>
         line.includes('Parse error') ||
-        line.includes('Unknown') ||
-        line.includes('Failed') ||
-        line.includes('Error')
+        line.includes('Errors reading') ||
+        line.includes('Failed parsing configuration item') ||
+        line.includes('Unknown name') ||
+        line.includes('Instantiation failed') ||
+        line.includes('Duplicate') ||
+        line.includes('Error') ||
+        line.includes('Invalid') ||
+        line.includes('Failed')
       ).slice(0, 15);
 
       return {
