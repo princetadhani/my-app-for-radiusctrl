@@ -13,8 +13,8 @@ A modern, production-ready web interface for managing FreeRADIUS configuration w
 ### 🎯 Core Functionality
 
 - **📂 Real-Time File Management**: Browse and edit `/etc/freeradius/3.0/` configuration files
-- **🔄 Shadow Buffer**: Detect concurrent file modifications (UI vs SSH)
-- **✅ Safe Deployment**: Atomic copy, validate with `freeradius -C`, then deploy
+- **🔄 Live Monitoring**: Real-time notifications when files are modified via SSH
+- **✅ Validation-Based Saves**: Auto-validate with `freeradius -C`, rollback on errors
 - **📊 Live Log Streaming**: Real-time log monitoring with pause/resume
 - **📡 COA Commands**: Execute Change-of-Authorization and Disconnect requests
 - **⚙️ Service Management**: Monitor status, reload, restart FreeRADIUS service

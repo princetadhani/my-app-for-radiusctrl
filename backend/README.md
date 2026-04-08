@@ -5,9 +5,8 @@ Node.js + Express backend with WebSocket support for FreeRADIUS UI management.
 ## Features
 
 - **File Management**: Browse, read, edit FreeRADIUS configuration files
-- **Shadow Buffer**: Detect concurrent file modifications (SSH vs UI)
-- **Safe-Save with Validation**: Atomic copy, validate with `freeradius -C`, then deploy
-- **File Watcher**: Real-time notifications via WebSocket when files change externally
+- **Validation-Based Saves**: Auto-validate every save, rollback on errors
+- **File Watcher**: Real-time notifications via WebSocket when files change externally via SSH
 - **Log Streaming**: Live log streaming with pause/resume functionality
 - **COA Commands**: Create and execute COA/Disconnect commands via radclient
 - **Service Management**: Get status, reload, restart FreeRADIUS service
@@ -55,8 +54,7 @@ npm start
 ### Files
 - `GET /api/files/tree` - Get file tree structure
 - `POST /api/files/content` - Get file content
-- `POST /api/files/save` - Save file with conflict detection
-- `POST /api/files/save-and-validate` - Safe-save with validation
+- `POST /api/files/save` - Save file with validation and automatic service reload
 - `POST /api/files/validate` - Validate configuration
 
 ### Logs
@@ -105,13 +103,14 @@ www-data ALL=(ALL) NOPASSWD: /usr/bin/radclient
 
 ## Architecture
 
-### Shadow Buffer Logic
-Files are monitored for external changes. When a user tries to save:
-1. Compare client mtime with disk mtime
-2. If different → conflict detected → return diff
-3. If same → save normally
+### Validation-Based Save Flow
+Every save automatically validates the configuration:
+1. Save file to disk
+2. Run `freeradius -C` validation
+3. If validation passes → Reload service
+4. If validation fails → Rollback to original content, return new mtime
 
-### Safe-Save Flow
+### Deploy Flow
 1. **Atomic Copy**: Copy `/etc/freeradius/3.0/` to `/tmp/radius_test/`
 2. **Apply Change**: Write edited file to test directory
 3. **Validate**: Run `freeradius -C -d /tmp/radius_test/`
@@ -120,6 +119,6 @@ Files are monitored for external changes. When a user tries to save:
 
 ### File Watcher (Inotify)
 Uses chokidar to monitor `/etc/freeradius/3.0/`:
-- Emits WebSocket events on file changes
-- UI shows toast notification
-- User can sync to get latest version
+- Emits WebSocket events on file changes (via SSH or external editors)
+- UI shows toast notifications for awareness
+- No conflict dialogs - user can continue editing normally
