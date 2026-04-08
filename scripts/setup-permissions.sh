@@ -7,8 +7,8 @@
 #  1. Adds user to freerad group
 #  2. Sets group write permissions (GROUP = USER permissions)
 #  3. Includes ALL files (configs, modules, certs)
-#  4. Sets COA directory ownership to freerad:freerad
-#  5. Fixes existing COA files ownership
+#  4. Sets COA & users.d directory ownership to freerad:freerad
+#  5. Fixes existing COA & users.d files ownership/permissions
 #  6. Configures sudo for validation/service control
 
 set -e
@@ -21,7 +21,8 @@ echo "This script will configure ALL permissions:"
 echo "  • Group permissions (freerad GROUP = freerad USER)"
 echo "  • Certificate access (RadSec support)"
 echo "  • COA directory ownership (freerad:freerad)"
-echo "  • Existing COA files (auto-fix ownership)"
+echo "  • users.d directory symlink, ownership, and inheritance"
+echo "  • Existing files (auto-fix ownership)"
 echo ""
 
 # Get current user
@@ -78,18 +79,18 @@ echo ""
 
 # Step 2: Set group permissions on ALL directories (including certs)
 echo "[2/5] Adding group write permission to ALL directories (including /certs/)..."
-sudo find /etc/freeradius/3.0 -type d -exec chmod g+w {} \;
+sudo find /etc/freeradius/3.0 -type d -exec chmod g+rw {} \;
 echo "✅ Done"
 echo ""
 
 # Step 3: Set group permissions on ALL files (including certs)
 echo "[3/5] Adding group write permission to ALL files (including /certs/)..."
-sudo find /etc/freeradius/3.0 -type f -exec chmod g+w {} \;
+sudo find /etc/freeradius/3.0 -type f -exec chmod g+rw {} \;
 echo "✅ Done"
 echo ""
 
 # Step 4: Create helper directories and fix existing files
-echo "[4/6] Creating helper directories..."
+echo "[4/6] Creating helper directories and symlinks..."
 
 # COA directory - owned by freerad:freerad (not root!)
 sudo mkdir -p /etc/freeradius/3.0/coa
@@ -105,6 +106,39 @@ if [ "$(sudo ls -A /etc/freeradius/3.0/coa 2>/dev/null)" ]; then
     FILE_COUNT=$(sudo ls /etc/freeradius/3.0/coa | wc -l)
     echo "  ✓ Fixed $FILE_COUNT existing COA file(s)"
 fi
+
+# --- NEW: users.d Directory & Symlink Setup ---
+USERS_DIR="/etc/freeradius/3.0/mods-config/files/users.d"
+USERS_LINK="/etc/freeradius/3.0/users.d"
+
+sudo mkdir -p $USERS_DIR
+sudo chown $RADIUS_GROUP:$RADIUS_GROUP $USERS_DIR
+# 2770: 2 sets SetGID (forces freerad group inheritance), 770 sets owner=rwx, group=rwx
+sudo chmod 2770 $USERS_DIR
+echo "  ✓ users.d directory: $RADIUS_GROUP:$RADIUS_GROUP (2770 with SetGID)"
+
+# Force 664 on newly created files via Default ACLs (so group can read AND write)
+if command -v setfacl >/dev/null 2>&1; then
+    sudo setfacl -d -m u::rw-,g::rw-,o::r-- $USERS_DIR
+    echo "  ✓ users.d ACLs: Configured to force 660 on new files"
+else
+    echo "  ⚠️ setfacl not found. File group will be inherited, but strict 660 depends on your umask."
+fi
+
+# Create Symlink
+sudo ln -sfn $USERS_DIR $USERS_LINK
+sudo chown -h $RADIUS_GROUP:$RADIUS_GROUP $USERS_LINK
+echo "  ✓ Created symlink: $USERS_LINK -> $USERS_DIR (owned by $RADIUS_GROUP)"
+
+# Fix existing files in users.d
+if [ "$(sudo ls -A $USERS_DIR 2>/dev/null)" ]; then
+    echo "  ℹ  Found existing users.d files - fixing ownership..."
+    sudo chown $RADIUS_GROUP:$RADIUS_GROUP $USERS_DIR/* 2>/dev/null || true
+    sudo chmod 664 $USERS_DIR/* 2>/dev/null || true
+    USER_FILE_COUNT=$(sudo ls $USERS_DIR | wc -l)
+    echo "  ✓ Fixed $USER_FILE_COUNT existing users.d file(s)"
+fi
+# ----------------------------------------------
 
 # Logs - add group write
 if [ -d /var/log/freeradius ]; then
@@ -156,11 +190,13 @@ fi
 if [ -d /etc/freeradius/3.0/coa ]; then
     echo "COA directory permissions:"
     ls -ld /etc/freeradius/3.0/coa | awk '{print "  " $3 ":" $4 " " $1 " coa/"}'
+fi
 
-    if [ "$(sudo ls -A /etc/freeradius/3.0/coa 2>/dev/null)" ]; then
-        echo "COA files (sample):"
-        sudo ls -l /etc/freeradius/3.0/coa | head -4 | tail -3 | awk '{print "  " $1 " " $3 ":" $4 " " $9}'
-    fi
+if [ -L /etc/freeradius/3.0/users.d ]; then
+    echo "users.d symlink:"
+    ls -l /etc/freeradius/3.0/users.d | awk '{print "  " $9 " " $10 " " $11}'
+    echo "users.d target directory permissions:"
+    ls -ld /etc/freeradius/3.0/mods-config/files/users.d | awk '{print "  " $3 ":" $4 " " $1 " users.d/"}'
 fi
 
 echo ""
@@ -173,8 +209,9 @@ echo ""
 echo "✅ Group permissions set (GROUP = USER)"
 echo "✅ Certificate access enabled (RadSec ready)"
 echo "✅ COA directory owned by $RADIUS_GROUP:$RADIUS_GROUP"
-if [ "$(sudo ls -A /etc/freeradius/3.0/coa 2>/dev/null)" ]; then
-    echo "✅ Existing COA files fixed"
+echo "✅ users.d symlink created and owned by $RADIUS_GROUP:$RADIUS_GROUP (770)"
+if [ "$(sudo ls -A /etc/freeradius/3.0/coa 2>/dev/null)" ] || [ "$(sudo ls -A /etc/freeradius/3.0/mods-config/files/users.d 2>/dev/null)" ]; then
+    echo "✅ Existing files in helper directories fixed"
 fi
 echo "✅ Sudo configured"
 echo ""
@@ -185,10 +222,5 @@ echo ""
 echo "After logging back in, verify:"
 echo "  1. Group:      groups | grep $RADIUS_GROUP"
 echo "  2. Write test: touch /etc/freeradius/3.0/test.tmp && rm /etc/freeradius/3.0/test.tmp"
-echo "  3. COA test:   touch /etc/freeradius/3.0/coa/test.tmp && rm /etc/freeradius/3.0/coa/test.tmp"
-echo "  4. Start app:  cd backend && npm run dev"
-echo ""
-echo "Then create a new COA file in the UI and verify:"
-echo "  sudo ls -l /etc/freeradius/3.0/coa/your_file.txt"
-echo "  (Should show: freerad:freerad ownership, NOT root!)"
+echo "  3. Start app:  cd backend && npm run dev"
 echo ""
