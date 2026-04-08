@@ -1,13 +1,18 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Radio, Command, Activity, Scroll, Wifi, Shield, User } from 'lucide-react';
+import { Radio, Command, Activity, Scroll, Wifi, Shield, User, UserPlus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { getRadiusStatus } from '@/lib/api';
 import Link from 'next/link';
 
-export function StatusHeader({ currentFile }: { currentFile?: string }) {
-  const [status, setStatus] = useState<'running' | 'stopped'>('running');
+interface StatusHeaderProps {
+  currentFile?: string;
+  onNewUserClick?: () => void;
+}
+
+export function StatusHeader({ currentFile, onNewUserClick }: StatusHeaderProps) {
+  const [status, setStatus] = useState<'running' | 'stopped' | 'unknown'>('running');
   const [requestsPerSecond, setRequestsPerSecond] = useState(0);
 
   useEffect(() => {
@@ -15,7 +20,7 @@ export function StatusHeader({ currentFile }: { currentFile?: string }) {
       try {
         const data = await getRadiusStatus();
         setStatus(data.status);
-        setRequestsPerSecond(data.requests_per_second || 0);
+        setRequestsPerSecond((data as any).requests_per_second || 0);
       } catch (error) {
         console.error('Failed to fetch RADIUS status:', error);
         // Keep current status on error, don't crash the UI
@@ -96,6 +101,26 @@ export function StatusHeader({ currentFile }: { currentFile?: string }) {
       <div className="flex items-center gap-3">
         {/* Navigation Buttons - Hidden on mobile */}
         <nav className="hidden md:flex items-center gap-3">
+          {/* New User Button */}
+          <button
+            onClick={onNewUserClick}
+            className="flex items-center gap-1.5 px-2 py-1 rounded transition-all duration-200 text-xs"
+            style={{
+              fontFamily: 'var(--font-inter)',
+              color: 'hsl(215, 15%, 55%)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(29, 35, 50, 0.5)';
+              e.currentTarget.style.color = 'hsl(210, 40%, 92%)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = 'hsl(215, 15%, 55%)';
+            }}
+          >
+            <UserPlus className="w-3 h-3" />
+            <span>New User</span>
+          </button>
           <Link
             href="/logs"
             className="flex items-center gap-1.5 px-2 py-1 rounded transition-all duration-200 text-xs"

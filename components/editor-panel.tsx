@@ -50,7 +50,8 @@ export function EditorPanel({ filePath, deployConsoleRef }: EditorPanelProps) {
         const data = await getFileContent(filePath);
         console.log('API Response:', data);
 
-        if (!data || !data.content) {
+        // Check if response is valid (content can be empty string for new files)
+        if (!data || data.content === undefined || data.content === null) {
           console.error('Invalid response from API:', data);
           customToast.error('Invalid file data received');
           setContent('');
@@ -58,7 +59,11 @@ export function EditorPanel({ filePath, deployConsoleRef }: EditorPanelProps) {
         }
 
         console.log('File loaded, content length:', data.content.length);
-        console.log('First 100 chars:', data.content.substring(0, 100));
+        if (data.content.length > 0) {
+          console.log('First 100 chars:', data.content.substring(0, 100));
+        } else {
+          console.log('File is empty (new file)');
+        }
         setContent(data.content);
         setMtime(data.mtime);
         setIsModified(false);

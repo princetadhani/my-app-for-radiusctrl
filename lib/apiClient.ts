@@ -56,6 +56,13 @@ export interface SaveFileResponse {
   validationError?: string;
 }
 
+export interface CreateUserResponse {
+  status: 'success' | 'exists' | 'validation_failed';
+  message: string;
+  validationOutput?: string;
+  validationError?: string;
+}
+
 export interface RadiusStatus {
   status: 'running' | 'stopped' | 'unknown';
   active: boolean;
@@ -215,6 +222,16 @@ export async function createCoaFile(fileName: string, attributes: string): Promi
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ fileName, attributes }),
+  });
+  return await res.json();
+}
+
+// User Management
+export async function createNewUser(filename: string): Promise<CreateUserResponse> {
+  const res = await fetch(`${API_BASE_URL}/api/files/create-user`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ filename }),
   });
   return await res.json();
 }

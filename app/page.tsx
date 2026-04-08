@@ -6,6 +6,7 @@ import { FileTree } from '@/components/file-tree';
 import { EditorPanel } from '@/components/editor-panel';
 import { DeployConsole, type DeployConsoleHandle } from '@/components/deploy-console';
 import { CommandPalette } from '@/components/command-palette';
+import { NewUserDialog } from '@/components/new-user-dialog';
 import { getFileTree, getSocket, type FileNode } from '@/lib/api';
 import { toast } from 'sonner';
 import { customToast } from '@/lib/custom-toast';
@@ -15,6 +16,7 @@ export default function Home() {
   const [activeFile, setActiveFile] = useState<string>('');
   const [fileTree, setFileTree] = useState<FileNode[]>([]);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isNewUserDialogOpen, setIsNewUserDialogOpen] = useState(false);
   const deployConsoleRef = useRef<DeployConsoleHandle>(null);
 
   // Load file tree on mount
@@ -223,10 +225,26 @@ export default function Home() {
     };
   }, []);
 
+  const handleNewUserSuccess = (username: string) => {
+    customToast.success(`User "${username}" created successfully`);
+    // Reload file tree to show new file
+    getFileTree().then(setFileTree).catch(console.error);
+  };
+
+  const handleNewUserError = (message: string, validationOutput?: string) => {
+    customToast.error(message);
+    if (validationOutput && deployConsoleRef.current) {
+      deployConsoleRef.current.showValidationError(validationOutput, message);
+    }
+  };
+
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       {/* Header */}
-      <StatusHeader currentFile={activeFile} />
+      <StatusHeader
+        currentFile={activeFile}
+        onNewUserClick={() => setIsNewUserDialogOpen(true)}
+      />
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden" style={{ paddingTop: '3rem' }}>
@@ -256,6 +274,14 @@ export default function Home() {
 
       {/* Command Palette */}
       <CommandPalette onFileSelect={setActiveFile} />
+
+      {/* New User Dialog */}
+      <NewUserDialog
+        isOpen={isNewUserDialogOpen}
+        onClose={() => setIsNewUserDialogOpen(false)}
+        onSuccess={handleNewUserSuccess}
+        onError={handleNewUserError}
+      />
     </div>
   );
 }

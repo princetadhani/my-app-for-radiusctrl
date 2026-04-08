@@ -71,4 +71,29 @@ router.post('/validate', async (req, res, next) => {
   }
 });
 
+/**
+ * POST /api/files/create-user
+ * Create new user file with validation and rollback
+ * 1. Validate filename (lowercase, no spaces, no extension)
+ * 2. Check if user already exists
+ * 3. Create user file in users.d/
+ * 4. Update authorize file with $INCLUDE
+ * 5. Validate with freeradius -XC
+ * 6. Rollback if validation fails
+ */
+router.post('/create-user', async (req, res, next) => {
+  try {
+    const { filename } = req.body;
+
+    if (!filename) {
+      return res.status(400).json({ error: 'Filename is required' });
+    }
+
+    const result = await fileService.createNewUser(filename);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;

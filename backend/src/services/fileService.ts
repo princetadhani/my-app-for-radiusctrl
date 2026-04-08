@@ -30,8 +30,16 @@ export interface SaveFileResponse {
   validationError?: string;
 }
 
+export interface CreateUserResponse {
+  status: 'success' | 'exists' | 'validation_failed';
+  message: string;
+  validationOutput?: string;
+  validationError?: string;
+}
+
 /**
  * Build file tree from directory
+ * Handles symlinks properly - symlinked directories are treated as directories
  */
 export async function buildFileTree(dirPath: string): Promise<FileNode[]> {
   try {
@@ -41,7 +49,22 @@ export async function buildFileTree(dirPath: string): Promise<FileNode[]> {
     for (const entry of entries) {
       const fullPath = path.join(dirPath, entry.name);
 
-      if (entry.isDirectory()) {
+      // Check if it's a directory or a symlink pointing to a directory
+      let isDir = entry.isDirectory();
+
+      // If it's a symlink, check what it points to
+      if (entry.isSymbolicLink()) {
+        try {
+          const stats = await fs.stat(fullPath); // stat() follows symlinks
+          isDir = stats.isDirectory();
+        } catch (error) {
+          // Broken symlink - skip it
+          logger.warn(`Skipping broken symlink: ${fullPath}`);
+          continue;
+        }
+      }
+
+      if (isDir) {
         const children = await buildFileTree(fullPath);
         nodes.push({
           name: entry.name,
@@ -174,6 +197,160 @@ export async function saveFile(
     };
   } catch (error: any) {
     logger.error(`Error saving file ${filePath}: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
+ * Create new user file with validation and rollback
+ *
+ * Workflow:
+ * 1. Validate filename (lowercase, no spaces, no extension)
+ * 2. Check if user already exists
+ * 3. Create user file in users.d/
+ * 4. Update authorize file with $INCLUDE
+ * 5. Validate with freeradius -XC
+ * 6. Rollback if validation fails
+ */
+export async function createNewUser(rawFilename: string): Promise<CreateUserResponse> {
+  let userFilePath: string | null = null;
+  let authorizeFilePath: string | null = null;
+  let authorizeBackup: string | null = null;
+
+  try {
+    // Step 1: Validate and sanitize filename
+    logger.info(`Creating new user: ${rawFilename}`);
+
+    // Remove extension if provided
+    let filename = rawFilename.split('.')[0];
+
+    // Check for spaces
+    if (/\s/.test(filename)) {
+      return {
+        status: 'validation_failed',
+        message: 'Filename cannot contain spaces',
+      };
+    }
+
+    // Convert to lowercase
+    filename = filename.toLowerCase();
+
+    // Validate it's alphanumeric (allow numbers)
+    if (!/^[a-z0-9]+$/.test(filename)) {
+      return {
+        status: 'validation_failed',
+        message: 'Filename must contain only letters and numbers',
+      };
+    }
+
+    // Step 2: Check if user already exists
+    const usersDir = path.join(config.freeradius.baseDir, 'mods-config/files/users.d');
+    userFilePath = path.join(usersDir, filename);
+
+    try {
+      await fs.access(userFilePath);
+      // File exists
+      logger.warn(`User already exists: ${filename}`);
+      return {
+        status: 'exists',
+        message: 'User already exists',
+      };
+    } catch {
+      // File doesn't exist - good, we can create it
+    }
+
+    // Step 3: Create user file
+    logger.info(`Creating user file: ${userFilePath}`);
+
+    // Ensure users.d directory exists
+    try {
+      await fs.mkdir(usersDir, { recursive: true });
+    } catch (error) {
+      // Directory might already exist, ignore error
+    }
+
+    // Create empty user file with proper permissions
+    await fs.writeFile(userFilePath, '', 'utf-8');
+
+    // Set proper permissions (664 - rw-rw-r--)
+    await fs.chmod(userFilePath, 0o664);
+
+    // Step 4: Update authorize file
+    authorizeFilePath = path.join(config.freeradius.baseDir, 'mods-config/files/authorize');
+
+    logger.info(`Updating authorize file: ${authorizeFilePath}`);
+
+    // Backup authorize file
+    const authorizeContent = await fs.readFile(authorizeFilePath, 'utf-8');
+    authorizeBackup = authorizeContent;
+
+    // Append $INCLUDE line
+    const includeStatement = `$INCLUDE users.d/${filename}\n`;
+    const newAuthorizeContent = authorizeContent + includeStatement;
+
+    await fs.writeFile(authorizeFilePath, newAuthorizeContent, 'utf-8');
+
+    // Step 5: Validate configuration
+    logger.info('Validating configuration with freeradius -XC...');
+
+    const validation = await validateConfiguration(config.freeradius.baseDir);
+
+    if (!validation.success) {
+      // Validation failed - ROLLBACK
+      logger.warn('Validation failed, rolling back changes...');
+
+      // Rollback: Delete user file
+      if (userFilePath) {
+        try {
+          await fs.unlink(userFilePath);
+          logger.info(`Rolled back: Deleted user file ${userFilePath}`);
+        } catch (error: any) {
+          logger.error(`Failed to delete user file during rollback: ${error.message}`);
+        }
+      }
+
+      // Rollback: Restore authorize file
+      if (authorizeFilePath && authorizeBackup) {
+        try {
+          await fs.writeFile(authorizeFilePath, authorizeBackup, 'utf-8');
+          logger.info(`Rolled back: Restored authorize file`);
+        } catch (error: any) {
+          logger.error(`Failed to restore authorize file during rollback: ${error.message}`);
+        }
+      }
+
+      return {
+        status: 'validation_failed',
+        message: 'Configuration validation failed. Changes were rolled back.',
+        validationOutput: validation.output,
+        validationError: validation.error,
+      };
+    }
+
+    // Success!
+    logger.info(`User created successfully: ${filename}`);
+
+    return {
+      status: 'success',
+      message: `User "${filename}" created successfully`,
+    };
+
+  } catch (error: any) {
+    logger.error(`Error creating user: ${error.message}`);
+
+    // Emergency rollback
+    if (userFilePath) {
+      try {
+        await fs.unlink(userFilePath);
+      } catch { }
+    }
+
+    if (authorizeFilePath && authorizeBackup) {
+      try {
+        await fs.writeFile(authorizeFilePath, authorizeBackup, 'utf-8');
+      } catch { }
+    }
+
     throw error;
   }
 }

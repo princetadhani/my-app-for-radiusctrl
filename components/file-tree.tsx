@@ -1,7 +1,7 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, Folder, FileText, Shield, Users, KeyRound, PanelLeftClose, PanelLeft } from 'lucide-react';
+import { ChevronRight, Folder, FileText, Shield, Users, KeyRound, PanelLeftClose, PanelLeft, UsersRound } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import type { FileNode } from '@/lib/api';
@@ -31,6 +31,18 @@ function TreeNode({
 
   const getIcon = () => {
     if (node.type === 'directory') {
+      // Special icon for users.d directory - UsersRound (group of users)
+      if (node.name === 'users.d') {
+        return (
+          <UsersRound
+            className="w-3.5 h-3.5"
+            style={{
+              color: isExpanded ? '#7aa2f7' : '#7aa2f799' // Same blue as folders
+            }}
+          />
+        );
+      }
+
       return (
         <Folder
           className="w-3.5 h-3.5"
@@ -71,6 +83,7 @@ function TreeNode({
 
   const isActive = node.type === 'file' && node.path === activeFile;
   const isDirectory = node.type === 'directory';
+  const isUsersDirectory = node.name === 'users.d';
 
   // Calculate padding based on depth
   const paddingLeft = isDirectory ? (level * 12) + 8 : (level * 12) + 20;
