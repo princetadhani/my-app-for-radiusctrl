@@ -174,7 +174,8 @@ export default function CoaPage() {
     const handleCreateFile = async (fileName: string) => {
         try {
             const fullFileName = fileName.endsWith('.txt') ? fileName : `${fileName}.txt`;
-            await createCoaFile(fullFileName, attributes);
+            // Pass empty string to use default template from backend
+            await createCoaFile(fullFileName, '');
 
             // Reload file tree
             const tree = await getCoaFileTree();
@@ -184,6 +185,10 @@ export default function CoaPage() {
             const coaDir = '/etc/freeradius/3.0/coa';
             const newFilePath = `${coaDir}/${fullFileName}`;
             setSelectedFile(newFilePath);
+
+            // Load the file content (with default template) into editor
+            const fileContent = await getCoaFileContent(fullFileName);
+            setAttributes(fileContent);
             setIsModified(false);
 
             customToast.success('File created successfully');

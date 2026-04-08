@@ -25,6 +25,7 @@ export interface CoaResponse {
 /**
  * Create COA file in the COA directory
  * Files are created with freerad:freerad ownership to match FreeRADIUS files
+ * If attributes is empty, a default template is used
  */
 export async function createCoaFile(
   fileName: string,
@@ -43,8 +44,30 @@ export async function createCoaFile(
     // SECURE: Use getSafePath to prevent directory traversal
     const filePath = getSafePath(config.freeradius.coaDir, fullFileName);
 
-    // Write attributes to file
-    await fs.writeFile(filePath, attributes, 'utf-8');
+    // Use provided attributes or default template
+    let content = attributes;
+
+    // If no attributes provided, use default template
+    if (!attributes || attributes.trim() === '') {
+      content = `# Default template for COA file
+# Uncomment and modify the attributes you need
+
+# User-Name = "prince"
+# NAS-IP-Address = 10.86.88.193
+# Session-Timeout = 10
+# Tunnel-Type = 13
+# Tunnel-Medium-Type = IEEE-802
+# Tunnel-Private-Group-Id = "3005"
+# Wibhu-User-BW-DL = 40000
+# Wibhu-User-BW-UL = 4000
+# Acct-Interim-Interval = 123
+# Session-Timeout = 3600
+# Acct-Session-Id = "SESSION_ID"
+`;
+    }
+
+    // Write content to file
+    await fs.writeFile(filePath, content, 'utf-8');
 
     // Get COA directory stats to match ownership
     try {

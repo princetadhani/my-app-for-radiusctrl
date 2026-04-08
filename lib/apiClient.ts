@@ -64,7 +64,7 @@ export interface CreateUserResponse {
 }
 
 export interface RadiusStatus {
-  status: 'running' | 'stopped' | 'unknown';
+  status: 'running' | 'stopped';
   active: boolean;
   uptime?: number;
   pid?: number;

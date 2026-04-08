@@ -13,7 +13,7 @@ interface StatusHeaderProps {
 }
 
 export function StatusHeader({ currentFile, onNewUserClick }: StatusHeaderProps) {
-  const [status, setStatus] = useState<'running' | 'stopped' | 'unknown'>('running');
+  const [status, setStatus] = useState<'running' | 'stopped'>('running');
   const [requestsPerSecond, setRequestsPerSecond] = useState(0);
   const router = useRouter();
   const pathname = usePathname();

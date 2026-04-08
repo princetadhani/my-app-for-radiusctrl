@@ -57,16 +57,21 @@ router.get('/files/:fileName', async (req, res, next) => {
 /**
  * POST /api/coa/create
  * Create COA file
+ * If attributes is empty, a default template will be used
  */
 router.post('/create', async (req, res, next) => {
   try {
     const { fileName, attributes } = req.body;
 
-    if (!fileName || !attributes) {
-      return res.status(400).json({ error: 'fileName and attributes are required' });
+    if (!fileName) {
+      return res.status(400).json({ error: 'fileName is required' });
     }
 
-    const result = await coaService.createCoaFile(fileName, attributes);
+    // attributes can be empty string (will use default template)
+    // If undefined, use empty string
+    const fileAttributes = attributes !== undefined ? attributes : '';
+
+    const result = await coaService.createCoaFile(fileName, fileAttributes);
     res.json(result);
   } catch (error: any) {
     // Return 403 for security violations (path traversal)

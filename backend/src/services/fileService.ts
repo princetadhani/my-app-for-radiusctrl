@@ -259,7 +259,7 @@ export async function createNewUser(rawFilename: string): Promise<CreateUserResp
       // File doesn't exist - good, we can create it
     }
 
-    // Step 3: Create user file
+    // Step 3: Create user file with default template
     logger.info(`Creating user file: ${userFilePath}`);
 
     // Ensure users.d directory exists
@@ -269,8 +269,37 @@ export async function createNewUser(rawFilename: string): Promise<CreateUserResp
       // Directory might already exist, ignore error
     }
 
-    // Create empty user file with proper permissions
-    await fs.writeFile(userFilePath, '', 'utf-8');
+    // Default template for new user files (commented out)
+    const defaultTemplate = `# FreeRADIUS User Configuration Template
+# Uncomment and modify the template you need
+
+# For MAC Based Auth template
+# MAC address for MAC-Based Authentication should be in lowercase and without any delimiters (e.g., 28d0ea388f83)
+
+# 28d0ea388f83    Auth-Type := Accept
+#                 Wibhu-User-BW-DL = 10000,
+#                 Wibhu-User-BW-UL = 10000,
+#                 Wibhu-User-ROLE = 'sample-role',
+#                 Acct-Interim-Interval = 60,
+#                 Session-Timeout := 180,
+#                 Tunnel-Type = 13,
+#                 Tunnel-Medium-Type = IEEE-802,
+#                 Tunnel-Private-Group-Id = 3007
+
+# For Normal EAP-PEAP based Auth template
+# prince      Cleartext-Password := "prince"
+#                 Wibhu-User-BW-DL = 20000,
+#                 Wibhu-User-BW-UL = 20000,
+#                 Wibhu-User-ROLE = 'role3003',
+#                 Acct-Interim-Interval = 600,
+#                 Session-Timeout := 180,
+#                 Tunnel-Type = 13,
+#                 Tunnel-Medium-Type = IEEE-802,
+#                 Tunnel-Private-Group-Id = 3003
+`;
+
+    // Create user file with template
+    await fs.writeFile(userFilePath, defaultTemplate, 'utf-8');
 
     // Set proper permissions (664 - rw-rw-r--)
     await fs.chmod(userFilePath, 0o664);
