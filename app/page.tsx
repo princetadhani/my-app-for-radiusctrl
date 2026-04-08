@@ -104,6 +104,9 @@ export default function Home() {
       // Extract filename from path
       const fileName = data.path.split('/').pop() || data.path;
 
+      // Reload file tree to show new file in command palette
+      getFileTree().then(setFileTree).catch(console.error);
+
       toast.custom(
         (t) => (
           <div style={{ position: 'relative' }}>
@@ -225,10 +228,16 @@ export default function Home() {
     };
   }, []);
 
-  const handleNewUserSuccess = (username: string) => {
+  const handleNewUserSuccess = async (username: string) => {
     customToast.success(`User "${username}" created successfully`);
-    // Reload file tree to show new file
-    getFileTree().then(setFileTree).catch(console.error);
+    // Reload file tree immediately to show new file in command palette
+    try {
+      const updatedTree = await getFileTree();
+      setFileTree(updatedTree);
+      console.log('File tree refreshed after user creation');
+    } catch (error) {
+      console.error('Failed to refresh file tree:', error);
+    }
   };
 
   const handleNewUserError = (message: string, validationOutput?: string) => {
@@ -273,7 +282,7 @@ export default function Home() {
       </div>
 
       {/* Command Palette */}
-      <CommandPalette onFileSelect={setActiveFile} />
+      <CommandPalette onFileSelect={setActiveFile} fileTree={fileTree} />
 
       {/* New User Dialog */}
       <NewUserDialog

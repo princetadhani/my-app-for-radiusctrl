@@ -3,10 +3,11 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, FileText, Command as CommandIcon } from 'lucide-react';
-import { getFileTree, type FileNode } from '@/lib/api';
+import { type FileNode } from '@/lib/api';
 
 interface CommandPaletteProps {
   onFileSelect: (path: string) => void;
+  fileTree: FileNode[];
 }
 
 interface SearchResult {
@@ -33,26 +34,18 @@ function flattenFiles(nodes: FileNode[], results: SearchResult[] = []): SearchRe
   return results;
 }
 
-export function CommandPalette({ onFileSelect }: CommandPaletteProps) {
+export function CommandPalette({ onFileSelect, fileTree }: CommandPaletteProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [allFiles, setAllFiles] = useState<SearchResult[]>([]);
 
-  // Load file tree on mount
+  // Update file list whenever fileTree changes
   useEffect(() => {
-    const loadFiles = async () => {
-      try {
-        const tree = await getFileTree();
-        const files = flattenFiles(tree);
-        setAllFiles(files);
-      } catch (error) {
-        console.error('Error loading files:', error);
-      }
-    };
-
-    loadFiles();
-  }, []);
+    const files = flattenFiles(fileTree);
+    setAllFiles(files);
+    console.log('Command palette updated with', files.length, 'files');
+  }, [fileTree]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
