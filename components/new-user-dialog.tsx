@@ -113,7 +113,7 @@ export function NewUserDialog({ isOpen, onClose, onSuccess, onError }: NewUserDi
               <motion.div
                 className="absolute -inset-0.5 rounded-xl opacity-75 blur-sm"
                 style={{
-                  background: 'linear-gradient(45deg, #9ece6a, #7aa2f7, #bb9af7, #9ece6a)',
+                  background: 'linear-gradient(45deg, #7aa2f7, #bb9af7, #7aa2f7, #bb9af7)',
                   backgroundSize: '300% 300%',
                 }}
                 animate={{
@@ -131,7 +131,7 @@ export function NewUserDialog({ isOpen, onClose, onSuccess, onError }: NewUserDi
                 className="relative p-6 rounded-xl shadow-2xl"
                 style={{
                   backgroundColor: '#0d1117',
-                  border: '1px solid rgba(158, 206, 106, 0.3)',
+                  border: '1px solid rgba(122, 162, 247, 0.3)',
                 }}
               >
                 {/* Close Button */}
@@ -148,7 +148,7 @@ export function NewUserDialog({ isOpen, onClose, onSuccess, onError }: NewUserDi
                 <motion.h2
                   className="text-xl font-bold mb-2"
                   style={{
-                    background: 'linear-gradient(135deg, #9ece6a, #7aa2f7)',
+                    background: 'linear-gradient(135deg, #7aa2f7, #bb9af7)',
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent',
                     backgroundClip: 'text',
@@ -189,18 +189,18 @@ export function NewUserDialog({ isOpen, onClose, onSuccess, onError }: NewUserDi
                     className="w-full px-4 py-2.5 rounded-lg text-sm transition-all focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{
                       backgroundColor: 'rgba(22, 27, 34, 0.8)',
-                      border: '1px solid rgba(158, 206, 106, 0.3)',
+                      border: '1px solid rgba(122, 162, 247, 0.3)',
                       color: '#c9d1d9',
                       fontFamily: 'JetBrains Mono, monospace',
                     }}
                     onFocus={(e) => {
                       if (!isCreating) {
-                        e.target.style.borderColor = 'rgba(158, 206, 106, 0.6)';
-                        e.target.style.boxShadow = '0 0 15px rgba(158, 206, 106, 0.3)';
+                        e.target.style.borderColor = 'rgba(122, 162, 247, 0.6)';
+                        e.target.style.boxShadow = '0 0 15px rgba(122, 162, 247, 0.3)';
                       }
                     }}
                     onBlur={(e) => {
-                      e.target.style.borderColor = 'rgba(158, 206, 106, 0.3)';
+                      e.target.style.borderColor = 'rgba(122, 162, 247, 0.3)';
                       e.target.style.boxShadow = 'none';
                     }}
                   />
@@ -252,8 +252,8 @@ export function NewUserDialog({ isOpen, onClose, onSuccess, onError }: NewUserDi
                     className="px-5 py-2 text-sm rounded-lg font-medium transition-all relative overflow-hidden group flex items-center gap-2"
                     style={{
                       background: filename.trim() && !isCreating
-                        ? 'linear-gradient(135deg, #9ece6a, #7aa2f7)'
-                        : 'rgba(158, 206, 106, 0.3)',
+                        ? 'linear-gradient(135deg, #7aa2f7, #bb9af7)'
+                        : 'rgba(122, 162, 247, 0.3)',
                       color: filename.trim() && !isCreating ? '#0d1117' : '#8b949e',
                       cursor: filename.trim() && !isCreating ? 'pointer' : 'not-allowed',
                     }}
