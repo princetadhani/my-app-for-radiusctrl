@@ -20,6 +20,7 @@ export interface FileNode {
 export interface FileContentResponse {
   content: string;
   mtime: number;
+  readOnly?: boolean;
 }
 
 export interface SaveFileResponse {
@@ -92,16 +93,28 @@ export async function buildFileTree(dirPath: string): Promise<FileNode[]> {
 }
 
 /**
+ * Check if a file path is read-only (authorize or users file)
+ */
+function isReadOnlyFile(filePath: string): boolean {
+  const authorizeFile = path.join(config.freeradius.baseDir, 'mods-config/files/authorize');
+  const usersFile = path.join(config.freeradius.baseDir, 'users');
+
+  return filePath === authorizeFile || filePath === usersFile;
+}
+
+/**
  * Get file content with modification time
  */
 export async function getFileContent(filePath: string): Promise<FileContentResponse> {
   try {
     const content = await fs.readFile(filePath, 'utf-8');
     const stats = await fs.stat(filePath);
+    const readOnly = isReadOnlyFile(filePath);
 
     return {
       content,
       mtime: stats.mtimeMs,
+      readOnly,
     };
   } catch (error: any) {
     logger.error(`Error reading file ${filePath}: ${error.message}`);
@@ -127,6 +140,16 @@ export async function saveFile(
   force: boolean = false
 ): Promise<SaveFileResponse> {
   try {
+    // Check if file is read-only
+    if (isReadOnlyFile(filePath)) {
+      logger.warn(`Attempted to save read-only file: ${filePath}`);
+      return {
+        status: 'validation_failed',
+        message: 'This file is read-only and cannot be edited from the UI',
+        validationError: 'This file is read-only. You can only view its content, not modify it.',
+      };
+    }
+
     // Get original file stats for permission preservation
     const originalStats = await fs.stat(filePath);
 
@@ -272,6 +295,7 @@ export async function createNewUser(rawFilename: string): Promise<CreateUserResp
     // Default template for new user files (commented out)
     const defaultTemplate = `# FreeRADIUS User Configuration Template
 # Uncomment and modify the template you need
+# Don't use this sample user for testing as it might be someone has saved it already & may occur conflict. 
 
 # For MAC Based Auth template
 # MAC address for MAC-Based Authentication should be in lowercase and without any delimiters (e.g., 28d0ea388f83)

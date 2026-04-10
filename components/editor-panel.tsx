@@ -22,6 +22,7 @@ export function EditorPanel({ filePath, deployConsoleRef }: EditorPanelProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [mtime, setMtime] = useState<number | null>(null);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+  const [isReadOnly, setIsReadOnly] = useState(false);
   const editorRef = useRef<any>(null);
 
   // Use refs to always have access to latest values in keyboard shortcuts
@@ -66,6 +67,7 @@ export function EditorPanel({ filePath, deployConsoleRef }: EditorPanelProps) {
         }
         setContent(data.content);
         setMtime(data.mtime);
+        setIsReadOnly(data.readOnly || false);
         setIsModified(false);
       } catch (error) {
         console.error('Failed to load file:', error);
@@ -84,6 +86,7 @@ export function EditorPanel({ filePath, deployConsoleRef }: EditorPanelProps) {
       setContent('');
       setIsModified(false);
       setMtime(null);
+      setIsReadOnly(false);
     }
   }, [filePath]);
 
@@ -143,6 +146,10 @@ export function EditorPanel({ filePath, deployConsoleRef }: EditorPanelProps) {
   // Monaco editor has its own keyboard shortcut system (see handleEditorDidMount)
 
   const handleEditorChange = (value: string | undefined) => {
+    // Prevent changes to read-only files
+    if (isReadOnly) {
+      return;
+    }
     setContent(value || '');
     setIsModified(true);
   };
@@ -291,6 +298,7 @@ export function EditorPanel({ filePath, deployConsoleRef }: EditorPanelProps) {
         filePath={filePath}
         fileName={filePath.split('/').pop()}
         isModified={isModified}
+        isReadOnly={isReadOnly}
         onCopy={handleCopyPath}
         onReset={handleResetClick}
         onSave={handleSaveFile}
@@ -335,7 +343,7 @@ export function EditorPanel({ filePath, deployConsoleRef }: EditorPanelProps) {
             automaticLayout: true,
             tabSize: 4,
             wordWrap: 'off',
-            readOnly: false,
+            readOnly: isReadOnly,
 
             // Visual
             renderWhitespace: "selection",

@@ -46,6 +46,7 @@ export interface FileNode {
 export interface FileContentResponse {
   content: string;
   mtime: number;
+  readOnly?: boolean;
 }
 
 export interface SaveFileResponse {
