@@ -350,40 +350,44 @@ export default function LogsPage() {
                 </button>
 
                 {/* Clear Button */}
-                <button
-                  onClick={handleClear}
-                  disabled={!isMounted || logs.length === 0}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all relative overflow-hidden group disabled:opacity-40 disabled:cursor-not-allowed"
-                  style={{
-                    background: isMounted && logs.length > 0 ? 'rgba(237, 135, 150, 0.15)' : 'rgba(139, 148, 158, 0.1)',
-                    border: isMounted && logs.length > 0 ? '1px solid rgba(237, 135, 150, 0.3)' : '1px solid rgba(139, 148, 158, 0.2)',
-                    color: isMounted && logs.length > 0 ? '#ed8796' : '#8b949e',
-                  }}
-                >
-                  <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-                  <Trash2 className="w-3.5 h-3.5 relative z-10" />
-                  <span className="relative z-10">Clear</span>
-                </button>
+                {isMounted && (
+                  <button
+                    onClick={handleClear}
+                    disabled={logs.length === 0}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all relative overflow-hidden group disabled:opacity-40 disabled:cursor-not-allowed"
+                    style={{
+                      background: logs.length > 0 ? 'rgba(237, 135, 150, 0.15)' : 'rgba(139, 148, 158, 0.1)',
+                      border: logs.length > 0 ? '1px solid rgba(237, 135, 150, 0.3)' : '1px solid rgba(139, 148, 158, 0.2)',
+                      color: logs.length > 0 ? '#ed8796' : '#8b949e',
+                    }}
+                  >
+                    <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                    <Trash2 className="w-3.5 h-3.5 relative z-10" />
+                    <span className="relative z-10">Clear</span>
+                  </button>
+                )}
 
                 {/* Download Button */}
-                <button
-                  onClick={handleDownload}
-                  disabled={!isMounted || logs.length === 0}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all relative overflow-hidden group disabled:opacity-40 disabled:cursor-not-allowed"
-                  style={{
-                    background: isMounted && logs.length > 0
-                      ? 'linear-gradient(135deg, rgba(122, 162, 247, 0.15), rgba(187, 154, 247, 0.15))'
-                      : 'rgba(139, 148, 158, 0.1)',
-                    border: isMounted && logs.length > 0
-                      ? '1px solid rgba(122, 162, 247, 0.3)'
-                      : '1px solid rgba(139, 148, 158, 0.2)',
-                    color: isMounted && logs.length > 0 ? '#7aa2f7' : '#8b949e',
-                  }}
-                >
-                  <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-                  <Download className="w-3.5 h-3.5 relative z-10" />
-                  <span className="relative z-10">Download</span>
-                </button>
+                {isMounted && (
+                  <button
+                    onClick={handleDownload}
+                    disabled={logs.length === 0}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all relative overflow-hidden group disabled:opacity-40 disabled:cursor-not-allowed"
+                    style={{
+                      background: logs.length > 0
+                        ? 'linear-gradient(135deg, rgba(122, 162, 247, 0.15), rgba(187, 154, 247, 0.15))'
+                        : 'rgba(139, 148, 158, 0.1)',
+                      border: logs.length > 0
+                        ? '1px solid rgba(122, 162, 247, 0.3)'
+                        : '1px solid rgba(139, 148, 158, 0.2)',
+                      color: logs.length > 0 ? '#7aa2f7' : '#8b949e',
+                    }}
+                  >
+                    <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                    <Download className="w-3.5 h-3.5 relative z-10" />
+                    <span className="relative z-10">Download</span>
+                  </button>
+                )}
               </div>
               <div className="text-xs text-muted-foreground">
                 FreeRADIUS Log Stream
