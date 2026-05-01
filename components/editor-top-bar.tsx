@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { Copy, RotateCcw, Save, Check, Eye } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface EditorTopBarProps {
   filePath?: string;
@@ -26,6 +26,11 @@ export function EditorTopBar({
   isSaving = false,
 }: EditorTopBarProps) {
   const [copied, setCopied] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const handleCopy = () => {
     if (onCopy) {
@@ -153,7 +158,7 @@ export function EditorTopBar({
         </button>
 
         {/* Reset Button */}
-        {!isReadOnly && (
+        {!isReadOnly && isMounted && (
           <button
             onClick={onReset}
             disabled={!isModified}
@@ -183,7 +188,7 @@ export function EditorTopBar({
         )}
 
         {/* Save Button - Matching COA page style */}
-        {!isReadOnly && (
+        {!isReadOnly && isMounted && (
           <button
             onClick={onSave}
             disabled={!isModified || isSaving}

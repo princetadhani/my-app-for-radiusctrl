@@ -28,8 +28,13 @@ export const DeployConsole = forwardRef<DeployConsoleHandle>((_props, ref) => {
   const [isValidating, setIsValidating] = useState(false);
   const [lines, setLines] = useState<AnimatedLine[]>([]);
   const [mode, setMode] = useState<ConsoleMode>('deploy');
+  const [isMounted, setIsMounted] = useState(false);
   const consoleRef = useRef<HTMLDivElement>(null);
   const animationRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     if (consoleRef.current) {
@@ -296,17 +301,19 @@ export const DeployConsole = forwardRef<DeployConsoleHandle>((_props, ref) => {
 
         <div className="flex items-center gap-2">
           {/* Clear Button */}
-          <button
-            onClick={handleClear}
-            disabled={lines.length === 0 ? true : false}
-            className="p-1.5 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Clear logs"
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
+          {isMounted && (
+            <button
+              onClick={handleClear}
+              disabled={lines.length === 0}
+              className="p-1.5 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Clear logs"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
 
           {/* Deploy/Apply Button - Hidden in validation mode */}
-          {mode === 'deploy' && (
+          {mode === 'deploy' && isMounted && (
             <button
               onClick={handleDeploy}
               disabled={isRunning}
