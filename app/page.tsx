@@ -48,59 +48,59 @@ export default function Home() {
       // Extract filename from path
       const fileName = data.path.split('/').pop() || data.path;
 
-      toast.custom(
-        (t) => (
-          <div style={{ position: 'relative' }}>
-            <button
-              onClick={() => toast.dismiss(t)}
-              style={{
-                position: 'absolute',
-                right: '-10px',
-                top: '-10px',
-                background: 'hsl(225, 25%, 12%)',
-                border: '1px solid hsl(225, 15%, 18%)',
-                borderRadius: '0.375rem',
-                width: '20px',
-                height: '20px',
-                color: 'hsl(210, 40%, 92%)',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                opacity: 0.8,
-                transition: 'opacity 0.2s',
-                zIndex: 10,
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
-              onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.8')}
-            >
-              <X size={12} />
-            </button>
-            <div
-              style={{
-                background: 'hsl(225, 25%, 12%, 0.95)',
-                border: '1px solid hsl(38, 95%, 60%, 0.6)',
-                borderRadius: '0.5rem',
-                padding: '0.875rem 1rem',
-                color: 'hsl(210, 40%, 92%)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                boxShadow: '0 0 12px hsl(38, 95%, 60%, 0.3), 0 0 4px hsl(38, 95%, 60%, 0.2)',
-                fontSize: '0.875rem',
-                minWidth: '356px',
-                maxWidth: '356px',
-              }}
-            >
-              <TriangleAlert size={18} style={{ color: 'hsl(38, 95%, 60%)', flexShrink: 0 }} />
-              <span>
-                <strong style={{ color: 'hsl(38, 95%, 60%)', fontWeight: 600 }}>{fileName}</strong> edited via SSH.
-              </span>
-            </div>
-          </div>
-        ),
-        { duration: 8000 }
-      );
+      // toast.custom(
+      //   (t) => (
+      //     <div style={{ position: 'relative' }}>
+      //       <button
+      //         onClick={() => toast.dismiss(t)}
+      //         style={{
+      //           position: 'absolute',
+      //           right: '-10px',
+      //           top: '-10px',
+      //           background: 'hsl(225, 25%, 12%)',
+      //           border: '1px solid hsl(225, 15%, 18%)',
+      //           borderRadius: '0.375rem',
+      //           width: '20px',
+      //           height: '20px',
+      //           color: 'hsl(210, 40%, 92%)',
+      //           cursor: 'pointer',
+      //           display: 'flex',
+      //           alignItems: 'center',
+      //           justifyContent: 'center',
+      //           opacity: 0.8,
+      //           transition: 'opacity 0.2s',
+      //           zIndex: 10,
+      //         }}
+      //         onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+      //         onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.8')}
+      //       >
+      //         <X size={12} />
+      //       </button>
+      //       <div
+      //         style={{
+      //           background: 'hsl(225, 25%, 12%, 0.95)',
+      //           border: '1px solid hsl(38, 95%, 60%, 0.6)',
+      //           borderRadius: '0.5rem',
+      //           padding: '0.875rem 1rem',
+      //           color: 'hsl(210, 40%, 92%)',
+      //           display: 'flex',
+      //           alignItems: 'center',
+      //           gap: '0.75rem',
+      //           boxShadow: '0 0 12px hsl(38, 95%, 60%, 0.3), 0 0 4px hsl(38, 95%, 60%, 0.2)',
+      //           fontSize: '0.875rem',
+      //           minWidth: '356px',
+      //           maxWidth: '356px',
+      //         }}
+      //       >
+      //         <TriangleAlert size={18} style={{ color: 'hsl(38, 95%, 60%)', flexShrink: 0 }} />
+      //         <span>
+      //           <strong style={{ color: 'hsl(38, 95%, 60%)', fontWeight: 600 }}>{fileName}</strong> edited via SSH.
+      //         </span>
+      //       </div>
+      //     </div>
+      //   ),
+      //   { duration: 8000 }
+      // );
     });
 
     socket.on('file:added', (data: { path: string; message: string }) => {
@@ -110,118 +110,118 @@ export default function Home() {
       // Reload file tree to show new file in command palette
       getFileTree().then(setFileTree).catch(console.error);
 
-      toast.custom(
-        (t) => (
-          <div style={{ position: 'relative' }}>
-            <button
-              onClick={() => toast.dismiss(t)}
-              style={{
-                position: 'absolute',
-                right: '-10px',
-                top: '-10px',
-                background: 'hsl(225, 25%, 12%)',
-                border: '1px solid hsl(225, 15%, 18%)',
-                borderRadius: '0.375rem',
-                width: '20px',
-                height: '20px',
-                color: 'hsl(210, 40%, 92%)',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                opacity: 0.8,
-                transition: 'opacity 0.2s',
-                zIndex: 10,
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
-              onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.8')}
-            >
-              <X size={12} />
-            </button>
-            <div
-              style={{
-                background: 'hsl(225, 25%, 12%, 0.95)',
-                border: '1px solid hsl(210, 100%, 60%, 0.6)',
-                borderRadius: '0.5rem',
-                padding: '0.875rem 1rem',
-                color: 'hsl(210, 40%, 92%)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                boxShadow: '0 0 12px hsl(210, 100%, 60%, 0.3), 0 0 4px hsl(210, 100%, 60%, 0.2)',
-                fontSize: '0.875rem',
-                minWidth: '356px',
-                maxWidth: '356px',
-              }}
-            >
-              <FilePlus size={18} style={{ color: 'hsl(210, 100%, 60%)', flexShrink: 0 }} />
-              <span>
-                <strong style={{ color: 'hsl(210, 100%, 60%)', fontWeight: 600 }}>{fileName}</strong> created via SSH.
-              </span>
-            </div>
-          </div>
-        ),
-        { duration: 8000 }
-      );
+      // toast.custom(
+      //   (t) => (
+      //     <div style={{ position: 'relative' }}>
+      //       <button
+      //         onClick={() => toast.dismiss(t)}
+      //         style={{
+      //           position: 'absolute',
+      //           right: '-10px',
+      //           top: '-10px',
+      //           background: 'hsl(225, 25%, 12%)',
+      //           border: '1px solid hsl(225, 15%, 18%)',
+      //           borderRadius: '0.375rem',
+      //           width: '20px',
+      //           height: '20px',
+      //           color: 'hsl(210, 40%, 92%)',
+      //           cursor: 'pointer',
+      //           display: 'flex',
+      //           alignItems: 'center',
+      //           justifyContent: 'center',
+      //           opacity: 0.8,
+      //           transition: 'opacity 0.2s',
+      //           zIndex: 10,
+      //         }}
+      //         onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+      //         onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.8')}
+      //       >
+      //         <X size={12} />
+      //       </button>
+      //       <div
+      //         style={{
+      //           background: 'hsl(225, 25%, 12%, 0.95)',
+      //           border: '1px solid hsl(210, 100%, 60%, 0.6)',
+      //           borderRadius: '0.5rem',
+      //           padding: '0.875rem 1rem',
+      //           color: 'hsl(210, 40%, 92%)',
+      //           display: 'flex',
+      //           alignItems: 'center',
+      //           gap: '0.75rem',
+      //           boxShadow: '0 0 12px hsl(210, 100%, 60%, 0.3), 0 0 4px hsl(210, 100%, 60%, 0.2)',
+      //           fontSize: '0.875rem',
+      //           minWidth: '356px',
+      //           maxWidth: '356px',
+      //         }}
+      //       >
+      //         <FilePlus size={18} style={{ color: 'hsl(210, 100%, 60%)', flexShrink: 0 }} />
+      //         <span>
+      //           <strong style={{ color: 'hsl(210, 100%, 60%)', fontWeight: 600 }}>{fileName}</strong> created via SSH.
+      //         </span>
+      //       </div>
+      //     </div>
+      //   ),
+      //   { duration: 8000 }
+      // );
     });
 
     socket.on('file:deleted', (data: { path: string; message: string }) => {
       // Extract filename from path
       const fileName = data.path.split('/').pop() || data.path;
 
-      toast.custom(
-        (t) => (
-          <div style={{ position: 'relative' }}>
-            <button
-              onClick={() => toast.dismiss(t)}
-              style={{
-                position: 'absolute',
-                right: '-10px',
-                top: '-10px',
-                background: 'hsl(225, 25%, 12%)',
-                border: '1px solid hsl(225, 15%, 18%)',
-                borderRadius: '0.375rem',
-                width: '20px',
-                height: '20px',
-                color: 'hsl(210, 40%, 92%)',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                opacity: 0.8,
-                transition: 'opacity 0.2s',
-                zIndex: 10,
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
-              onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.8')}
-            >
-              <X size={12} />
-            </button>
-            <div
-              style={{
-                background: 'hsl(225, 25%, 12%, 0.95)',
-                border: '1px solid hsl(0, 85%, 60%, 0.6)',
-                borderRadius: '0.5rem',
-                padding: '0.875rem 1rem',
-                color: 'hsl(210, 40%, 92%)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                boxShadow: '0 0 12px hsl(0, 85%, 60%, 0.3), 0 0 4px hsl(0, 85%, 60%, 0.2)',
-                fontSize: '0.875rem',
-                minWidth: '356px',
-                maxWidth: '356px',
-              }}
-            >
-              <Trash2 size={18} style={{ color: 'hsl(0, 85%, 60%)', flexShrink: 0 }} />
-              <span>
-                <strong style={{ color: 'hsl(0, 85%, 60%)', fontWeight: 600 }}>{fileName}</strong> deleted via SSH.
-              </span>
-            </div>
-          </div>
-        ),
-        { duration: 8000 }
-      );
+      // toast.custom(
+      //   (t) => (
+      //     <div style={{ position: 'relative' }}>
+      //       <button
+      //         onClick={() => toast.dismiss(t)}
+      //         style={{
+      //           position: 'absolute',
+      //           right: '-10px',
+      //           top: '-10px',
+      //           background: 'hsl(225, 25%, 12%)',
+      //           border: '1px solid hsl(225, 15%, 18%)',
+      //           borderRadius: '0.375rem',
+      //           width: '20px',
+      //           height: '20px',
+      //           color: 'hsl(210, 40%, 92%)',
+      //           cursor: 'pointer',
+      //           display: 'flex',
+      //           alignItems: 'center',
+      //           justifyContent: 'center',
+      //           opacity: 0.8,
+      //           transition: 'opacity 0.2s',
+      //           zIndex: 10,
+      //         }}
+      //         onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+      //         onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.8')}
+      //       >
+      //         <X size={12} />
+      //       </button>
+      //       <div
+      //         style={{
+      //           background: 'hsl(225, 25%, 12%, 0.95)',
+      //           border: '1px solid hsl(0, 85%, 60%, 0.6)',
+      //           borderRadius: '0.5rem',
+      //           padding: '0.875rem 1rem',
+      //           color: 'hsl(210, 40%, 92%)',
+      //           display: 'flex',
+      //           alignItems: 'center',
+      //           gap: '0.75rem',
+      //           boxShadow: '0 0 12px hsl(0, 85%, 60%, 0.3), 0 0 4px hsl(0, 85%, 60%, 0.2)',
+      //           fontSize: '0.875rem',
+      //           minWidth: '356px',
+      //           maxWidth: '356px',
+      //         }}
+      //       >
+      //         <Trash2 size={18} style={{ color: 'hsl(0, 85%, 60%)', flexShrink: 0 }} />
+      //         <span>
+      //           <strong style={{ color: 'hsl(0, 85%, 60%)', fontWeight: 600 }}>{fileName}</strong> deleted via SSH.
+      //         </span>
+      //       </div>
+      //     </div>
+      //   ),
+      //   { duration: 8000 }
+      // );
     });
 
     return () => {
