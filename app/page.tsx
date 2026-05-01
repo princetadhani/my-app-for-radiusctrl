@@ -55,7 +55,7 @@ export default function Home() {
               onClick={() => toast.dismiss(t)}
               style={{
                 position: 'absolute',
-                left: '-10px',
+                right: '-10px',
                 top: '-10px',
                 background: 'hsl(225, 25%, 12%)',
                 border: '1px solid hsl(225, 15%, 18%)',
@@ -117,7 +117,7 @@ export default function Home() {
               onClick={() => toast.dismiss(t)}
               style={{
                 position: 'absolute',
-                left: '-10px',
+                right: '-10px',
                 top: '-10px',
                 background: 'hsl(225, 25%, 12%)',
                 border: '1px solid hsl(225, 15%, 18%)',
@@ -176,7 +176,7 @@ export default function Home() {
               onClick={() => toast.dismiss(t)}
               style={{
                 position: 'absolute',
-                left: '-10px',
+                right: '-10px',
                 top: '-10px',
                 background: 'hsl(225, 25%, 12%)',
                 border: '1px solid hsl(225, 15%, 18%)',
