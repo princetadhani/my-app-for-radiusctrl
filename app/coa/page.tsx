@@ -1,11 +1,14 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { Plus, Trash2, Save } from 'lucide-react';
-import Editor from '@monaco-editor/react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import Editor, { OnMount } from '@monaco-editor/react';
+import { Loader2 } from 'lucide-react';
 import { StatusHeader } from '@/components/status-header';
 import { FileTree } from '@/components/file-tree';
 import { CoaConsole, type CoaConsoleHandle } from '@/components/coa-console';
+import { CoaEditorTopBar } from '@/components/coa-editor-top-bar';
+import { CoaEmptyState } from '@/components/coa-empty-state';
+import { CoaCommandPalette } from '@/components/coa-command-palette';
 import { CustomDialog } from '@/components/custom-dialog';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { customToast } from '@/lib/custom-toast';
@@ -26,115 +29,107 @@ const STORAGE_KEYS = {
 };
 
 export default function CoaPage() {
-    // File tree state
     const [fileTree, setFileTree] = useState<FileNode[]>([]);
     const [selectedFile, setSelectedFile] = useState<string>('');
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-
-    // Editor state
-    const [attributes, setAttributes] = useState('User-Name = "testuser"\nFramed-IP-Address = "192.168.1.100"');
+    const [attributes, setAttributes] = useState('');
+    const [originalContent, setOriginalContent] = useState('');
     const [isModified, setIsModified] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [isMounted, setIsMounted] = useState(false);
     const editorRef = useRef<any>(null);
-
-    // COA request state - Initialize with defaults first (to avoid hydration mismatch)
     const [requestType, setRequestType] = useState<'coa' | 'disconnect'>('coa');
     const [nasIp, setNasIp] = useState('10.86.1.1');
     const [nasSecret, setNasSecret] = useState('');
-
-    // Console ref
     const consoleRef = useRef<CoaConsoleHandle>(null);
-
-    // Dialog state
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+    const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
 
-    // Load from localStorage after hydration (client-side only)
+    // Ensure component is mounted before rendering interactive elements
     useEffect(() => {
-        // Load saved values from localStorage
+        setIsMounted(true);
+    }, []);
+
+    useEffect(() => {
         const savedRequestType = localStorage.getItem(STORAGE_KEYS.REQUEST_TYPE);
         const savedNasIp = localStorage.getItem(STORAGE_KEYS.NAS_IP);
         const savedNasSecret = localStorage.getItem(STORAGE_KEYS.NAS_SECRET);
-
-        if (savedRequestType) {
-            setRequestType(savedRequestType as 'coa' | 'disconnect');
-        }
-        if (savedNasIp) {
-            setNasIp(savedNasIp);
-        }
-        if (savedNasSecret) {
-            setNasSecret(savedNasSecret);
-        }
+        if (savedRequestType) setRequestType(savedRequestType as 'coa' | 'disconnect');
+        if (savedNasIp) setNasIp(savedNasIp);
+        if (savedNasSecret) setNasSecret(savedNasSecret);
     }, []);
 
-    // Load COA file tree on mount
     useEffect(() => {
-        const loadFileTree = async () => {
-            try {
-                const tree = await getCoaFileTree();
-                setFileTree(tree);
-            } catch (error) {
-                console.error('Failed to load COA file tree:', error);
-                customToast.error('Failed to load COA files');
-            }
-        };
-
-        loadFileTree();
+        getCoaFileTree().then(setFileTree).catch(() => customToast.error('Failed to load COA files'));
     }, []);
 
-    // Save settings to localStorage when they change
     useEffect(() => {
         if (typeof window !== 'undefined') {
             localStorage.setItem(STORAGE_KEYS.NAS_IP, nasIp);
-        }
-    }, [nasIp]);
-
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
             localStorage.setItem(STORAGE_KEYS.NAS_SECRET, nasSecret);
-        }
-    }, [nasSecret]);
-
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
             localStorage.setItem(STORAGE_KEYS.REQUEST_TYPE, requestType);
         }
-    }, [requestType]);
+    }, [nasIp, nasSecret, requestType]);
 
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+                e.preventDefault();
+                setIsCommandPaletteOpen(prev => !prev);
+            }
+        };
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, []);
 
-
-    // Handle file selection
-    const handleFileSelect = async (path: string) => {
+    const handleFileSelect = useCallback(async (path: string) => {
         try {
+            setIsLoading(true);
             setSelectedFile(path);
-            // Extract filename from full path
             const fileName = path.split('/').pop() || '';
             const content = await getCoaFileContent(fileName);
             setAttributes(content);
+            setOriginalContent(content);
             setIsModified(false);
         } catch (error) {
-            console.error('Failed to load file:', error);
             customToast.error('Failed to load file content');
+        } finally {
+            setIsLoading(false);
         }
-    };
+    }, []);
 
-    // Handle editor changes
     const handleEditorChange = (value: string | undefined) => {
         setAttributes(value || '');
         setIsModified(true);
     };
 
-    const handleEditorDidMount = (editor: any, monaco: any) => {
+    const handleSaveFile = useCallback(async () => {
+        if (!selectedFile) return;
+        try {
+            setIsSaving(true);
+            const fileName = selectedFile.split('/').pop() || '';
+            await createCoaFile(fileName, attributes);
+            setOriginalContent(attributes);
+            setIsModified(false);
+            customToast.success('File saved successfully');
+        } catch (error) {
+            customToast.error('Failed to save file');
+        } finally {
+            setIsSaving(false);
+        }
+    }, [selectedFile, attributes]);
+
+    const handleEditorDidMount: OnMount = useCallback((editor, monaco) => {
         editorRef.current = editor;
-
-        // Add Cmd+S / Ctrl+S keyboard shortcut to save
-        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
-            if (selectedFile && isModified) {
-                handleSaveFile();
-            }
+        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, async () => {
+            // Call save directly without checking state inside the callback
+            // The state will be checked when the function executes
+            await handleSaveFile();
         });
-
-        // Define custom theme matching dark navy blue
-        monaco.editor.defineTheme('radius-theme', {
+        monaco.editor.defineTheme('radius-dark', {
             base: 'vs-dark',
             inherit: true,
             rules: [
@@ -144,121 +139,115 @@ export default function CoaPage() {
             ],
             colors: {
                 'editor.background': '#0d1117',
+                'editor.foreground': '#c9d1d9',
                 'editor.lineHighlightBackground': '#161b22',
-                'editorLineNumber.foreground': '#8b949e',
+                'editorLineNumber.foreground': '#6e7681',
                 'editor.selectionBackground': '#1f6feb40',
+                'editorCursor.foreground': '#7aa2f7',
             },
         });
-        monaco.editor.setTheme('radius-theme');
+        monaco.editor.setTheme('radius-dark');
+    }, [handleSaveFile]);
+
+    const handleResetClick = () => {
+        setIsResetDialogOpen(true);
     };
 
-    // Save file
-    const handleSaveFile = async () => {
+    const handleResetConfirm = () => {
+        setAttributes(originalContent);
+        setIsModified(false);
+        setIsResetDialogOpen(false);
+        customToast.success('Changes reset');
+    };
+
+    const handleCopyPath = useCallback(async () => {
         if (!selectedFile) {
             customToast.error('No file selected');
             return;
         }
 
         try {
-            const fileName = selectedFile.split('/').pop() || '';
-            await createCoaFile(fileName, attributes);
-            setIsModified(false);
-            customToast.success('File saved successfully');
+            // Use the same approach as the main editor
+            if (navigator.clipboard && window.isSecureContext) {
+                await navigator.clipboard.writeText(selectedFile);
+                customToast.success('File path copied to clipboard');
+            } else {
+                // Fallback method
+                const textArea = document.createElement('textarea');
+                textArea.value = selectedFile;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-999999px';
+                textArea.style.top = '-999999px';
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    customToast.success('File path copied to clipboard');
+                } catch (err) {
+                    customToast.error('Failed to copy to clipboard');
+                }
+                document.body.removeChild(textArea);
+            }
         } catch (error) {
-            console.error('Failed to save file:', error);
-            customToast.error('Failed to save file');
+            console.error('Failed to copy:', error);
+            customToast.error('Failed to copy to clipboard');
         }
-    };
+    }, [selectedFile]);
 
-    // Create new file
     const handleCreateFile = async (fileName: string) => {
         try {
             const fullFileName = fileName.endsWith('.txt') ? fileName : `${fileName}.txt`;
-            // Pass empty string to use default template from backend
             await createCoaFile(fullFileName, '');
-
-            // Reload file tree
             const tree = await getCoaFileTree();
             setFileTree(tree);
-
-            // Auto-load the created file
             const coaDir = '/etc/freeradius/3.0/coa';
             const newFilePath = `${coaDir}/${fullFileName}`;
             setSelectedFile(newFilePath);
-
-            // Load the file content (with default template) into editor
             const fileContent = await getCoaFileContent(fullFileName);
             setAttributes(fileContent);
+            setOriginalContent(fileContent);
             setIsModified(false);
-
             customToast.success('File created successfully');
         } catch (error) {
-            console.error('Failed to create file:', error);
             customToast.error('Failed to create file');
         }
     };
 
-    // Delete file
     const handleDeleteFile = async () => {
-        if (!selectedFile) {
-            customToast.error('No file selected');
-            return;
-        }
-
+        if (!selectedFile) return;
         const fileName = selectedFile.split('/').pop() || '';
-
         try {
             await deleteCoaFile(fileName);
-
-            // Reload file tree
             const tree = await getCoaFileTree();
             setFileTree(tree);
-
             setSelectedFile('');
             setAttributes('');
+            setOriginalContent('');
             setIsDeleteDialogOpen(false);
             customToast.success('File deleted successfully');
         } catch (error) {
-            console.error('Failed to delete file:', error);
             customToast.error('Failed to delete file');
         }
     };
 
-    // Send COA command
     const handleSend = async (): Promise<{ success: boolean; output: string }> => {
-        if (!selectedFile) {
+        if (!selectedFile || !consoleRef.current) {
             customToast.error('Please select a COA file first');
             return { success: false, output: '' };
         }
-
-        if (!consoleRef.current) {
-            return { success: false, output: '' };
-        }
-
         const fileName = selectedFile.split('/').pop() || '';
         const fullPath = `/etc/freeradius/3.0/coa/${fileName}`;
-
-        // Show command
         await consoleRef.current.addLine(`$ sudo radclient -f ${fullPath} -x -r 1 ${nasIp} ${requestType} ${nasSecret}`, 'cmd', 0);
         await consoleRef.current.addLine(`Connecting to NAS ${nasIp}:3799...`, 'info', 300);
         await consoleRef.current.addLine(`Sending ${requestType.toUpperCase()} request...`, 'info', 200);
-
         try {
-            const result = await executeCoaCommand({
-                type: requestType,
-                nasIp,
-                nasSecret,
-                attributes,
-                fileName,
-            });
-
-            // Parse and display output
+            const result = await executeCoaCommand({ type: requestType, nasIp, nasSecret, attributes, fileName });
             const outputLines = result.output.split('\n').filter(line => line.trim());
             for (const line of outputLines) {
                 const lineType = line.includes('error') || line.includes('failed') ? 'error' : 'info';
                 await consoleRef.current.addLine(line, lineType, 100);
             }
-
             if (result.success) {
                 await consoleRef.current.addLine('✓ COA request sent successfully', 'final-success', 400);
                 customToast.success('COA request sent successfully');
@@ -266,7 +255,6 @@ export default function CoaPage() {
                 await consoleRef.current.addLine('✗ COA request failed', 'final-error', 300);
                 customToast.error('COA request failed');
             }
-
             return result;
         } catch (error) {
             const errorMsg = error instanceof Error ? error.message : String(error);
@@ -276,16 +264,10 @@ export default function CoaPage() {
         }
     };
 
-
-
     return (
         <div className="h-screen flex flex-col overflow-hidden">
-            {/* Header */}
             <StatusHeader currentFile={selectedFile} />
-
-            {/* Main Content */}
             <div className="flex-1 flex overflow-hidden" style={{ paddingTop: '3rem' }}>
-                {/* Sidebar - File Tree */}
                 <FileTree
                     nodes={fileTree}
                     activeFile={selectedFile}
@@ -293,114 +275,56 @@ export default function CoaPage() {
                     isCollapsed={isSidebarCollapsed}
                     onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
                 />
-
-                {/* Editor Area */}
                 <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-                    {/* Top Toolbar */}
-                    <div
-                        className="border-b flex items-center justify-between px-4 py-2"
-                        style={{
-                            backgroundColor: 'rgba(18, 23, 35, 0.6)',
-                            backdropFilter: 'blur(16px) saturate(1.2)',
-                            borderBottomColor: 'hsl(225, 15%, 18%)',
-                        }}
-                    >
-                        <div className="flex items-center gap-3">
-                            <span className="text-sm font-mono" style={{ color: '#c9d1d9' }}>
-                                {selectedFile ? selectedFile.split('/').pop() : 'No file selected'}
-                            </span>
-                            {isModified && (
-                                <span className="text-xs" style={{ color: '#ff9e64' }}>● Modified</span>
-                            )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                            {/* New Button */}
-                            <button
-                                onClick={() => setIsCreateDialogOpen(true)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all relative overflow-hidden group"
-                                style={{
-                                    background: 'linear-gradient(135deg, rgba(122, 162, 247, 0.15), rgba(187, 154, 247, 0.15))',
-                                    border: '1px solid rgba(122, 162, 247, 0.3)',
-                                    color: '#7aa2f7',
+                    <CoaEditorTopBar
+                        filePath={selectedFile}
+                        fileName={selectedFile ? selectedFile.split('/').pop() : undefined}
+                        isModified={isModified}
+                        onCopy={handleCopyPath}
+                        onReset={handleResetClick}
+                        onSave={handleSaveFile}
+                        onNew={() => setIsCreateDialogOpen(true)}
+                        onDelete={() => setIsDeleteDialogOpen(true)}
+                        isSaving={isSaving}
+                        isMounted={isMounted}
+                    />
+                    <div className="flex-1 min-h-0 overflow-hidden relative bg-card">
+                        {!selectedFile ? (
+                            <CoaEmptyState />
+                        ) : (
+                            <Editor
+                                key={selectedFile}
+                                height="100%"
+                                width="100%"
+                                defaultLanguage="ini"
+                                value={attributes}
+                                onChange={handleEditorChange}
+                                onMount={handleEditorDidMount}
+                                theme="radius-dark"
+                                loading={<div className="flex items-center justify-center h-full"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>}
+                                options={{
+                                    fontSize: 13,
+                                    fontFamily: "var(--font-jetbrains-mono), 'JetBrains Mono', monospace",
+                                    fontLigatures: true,
+                                    lineHeight: 20,
+                                    minimap: { enabled: true, scale: 1, showSlider: "mouseover" },
+                                    scrollBeyondLastLine: false,
+                                    smoothScrolling: true,
+                                    cursorBlinking: "smooth",
+                                    cursorSmoothCaretAnimation: "on",
+                                    automaticLayout: true,
+                                    tabSize: 4,
+                                    wordWrap: 'off',
+                                    renderWhitespace: "selection",
+                                    bracketPairColorization: { enabled: true },
+                                    padding: { top: 12 },
+                                    overviewRulerBorder: false,
+                                    hideCursorInOverviewRuler: true,
+                                    scrollbar: { verticalScrollbarSize: 6, horizontalScrollbarSize: 6 },
                                 }}
-                                title="Create new COA file (Ctrl+N)"
-                            >
-                                <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-                                <Plus className="w-3.5 h-3.5 relative z-10" />
-                                <span className="relative z-10">New</span>
-                            </button>
-
-                            {/* Delete Button */}
-                            <button
-                                onClick={() => setIsDeleteDialogOpen(true)}
-                                disabled={!selectedFile}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all relative overflow-hidden group disabled:opacity-40 disabled:cursor-not-allowed"
-                                style={{
-                                    background: selectedFile ? 'rgba(237, 135, 150, 0.15)' : 'rgba(139, 148, 158, 0.1)',
-                                    border: selectedFile ? '1px solid rgba(237, 135, 150, 0.3)' : '1px solid rgba(139, 148, 158, 0.2)',
-                                    color: selectedFile ? '#ed8796' : '#8b949e',
-                                }}
-                                title="Delete selected file (Del)"
-                            >
-                                <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-                                <Trash2 className="w-3.5 h-3.5 relative z-10" />
-                                <span className="relative z-10">Delete</span>
-                            </button>
-
-                            {/* Save Button */}
-                            <button
-                                onClick={handleSaveFile}
-                                disabled={!isModified || !selectedFile}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all relative overflow-hidden group disabled:opacity-40 disabled:cursor-not-allowed"
-                                style={{
-                                    background: isModified && selectedFile
-                                        ? 'linear-gradient(135deg, rgba(158, 206, 106, 0.2), rgba(158, 206, 106, 0.15))'
-                                        : 'rgba(139, 148, 158, 0.1)',
-                                    border: isModified && selectedFile
-                                        ? '1px solid rgba(158, 206, 106, 0.4)'
-                                        : '1px solid rgba(139, 148, 158, 0.2)',
-                                    color: isModified && selectedFile ? '#9ece6a' : '#8b949e',
-                                    boxShadow: isModified && selectedFile ? '0 0 12px rgba(158, 206, 106, 0.3)' : 'none',
-                                }}
-                                title="Save file (Cmd+S / Ctrl+S)"
-                            >
-                                <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-                                <Save className="w-3.5 h-3.5 relative z-10" />
-                                <span className="relative z-10">Save</span>
-                            </button>
-                        </div>
+                            />
+                        )}
                     </div>
-
-                    {/* Monaco Editor */}
-                    <div className="flex-1 min-h-0 overflow-hidden" style={{ backgroundColor: '#0d1117' }}>
-                        <Editor
-                            height="100%"
-                            language="ini"
-                            value={attributes}
-                            onChange={handleEditorChange}
-                            onMount={handleEditorDidMount}
-                            theme="radius-theme"
-                            loading={
-                                <div className="flex items-center justify-center h-full text-muted-foreground">
-                                    Loading editor...
-                                </div>
-                            }
-                            options={{
-                                minimap: { enabled: false },
-                                fontSize: 13,
-                                lineNumbers: 'on',
-                                renderWhitespace: 'selection',
-                                scrollBeyondLastLine: false,
-                                automaticLayout: true,
-                                tabSize: 2,
-                                wordWrap: 'off',
-                                fontFamily: 'JetBrains Mono, Consolas, Monaco, monospace',
-                                readOnly: !selectedFile,
-                            }}
-                        />
-                    </div>
-
-                    {/* COA Console */}
                     <CoaConsole
                         ref={consoleRef}
                         nasIp={nasIp}
@@ -415,8 +339,13 @@ export default function CoaPage() {
                     />
                 </div>
             </div>
-
-            {/* Create File Dialog */}
+            <CoaCommandPalette
+                isOpen={isCommandPaletteOpen}
+                onClose={() => setIsCommandPaletteOpen(false)}
+                fileTree={fileTree}
+                onFileSelect={handleFileSelect}
+                onCreateNew={() => { setIsCommandPaletteOpen(false); setIsCreateDialogOpen(true); }}
+            />
             <CustomDialog
                 isOpen={isCreateDialogOpen}
                 onClose={() => setIsCreateDialogOpen(false)}
@@ -427,8 +356,6 @@ export default function CoaPage() {
                 confirmText="Create"
                 cancelText="Cancel"
             />
-
-            {/* Delete File Dialog */}
             <ConfirmDialog
                 isOpen={isDeleteDialogOpen}
                 onClose={() => setIsDeleteDialogOpen(false)}
@@ -439,8 +366,16 @@ export default function CoaPage() {
                 cancelText="Cancel"
                 variant="danger"
             />
-
-
+            <ConfirmDialog
+                isOpen={isResetDialogOpen}
+                onClose={() => setIsResetDialogOpen(false)}
+                onConfirm={handleResetConfirm}
+                title="Reset Changes"
+                description={`Are you sure you want to reset all changes to "${selectedFile?.split('/').pop()}"? This will discard all unsaved modifications.`}
+                confirmText="Reset"
+                cancelText="Cancel"
+                variant="warning"
+            />
         </div>
     );
 }

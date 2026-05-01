@@ -1,91 +1,38 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, FileText, Command as CommandIcon } from 'lucide-react';
-import { type FileNode } from '@/lib/api';
+import { Search, FileText, Zap } from 'lucide-react';
+import type { FileNode } from '@/lib/api';
 
-interface CommandPaletteProps {
-  onFileSelect: (path: string) => void;
+interface CoaCommandPaletteProps {
+  isOpen: boolean;
+  onClose: () => void;
   fileTree: FileNode[];
+  onFileSelect: (path: string) => void;
+  onCreateNew: () => void;
 }
 
-interface SearchResult {
-  type: 'file' | 'action';
-  label: string;
-  path?: string;
-  icon?: React.ReactNode;
-}
-
-function flattenFiles(nodes: FileNode[], results: SearchResult[] = []): SearchResult[] {
-  nodes.forEach(node => {
-    if (node.type === 'file') {
-      results.push({
-        type: 'file',
-        label: node.path,
-        path: node.path,
-        icon: <FileText className="w-4 h-4 text-primary" />,
-      });
-    }
-    if (node.children) {
-      flattenFiles(node.children, results);
-    }
-  });
-  return results;
-}
-
-export function CommandPalette({ onFileSelect, fileTree }: CommandPaletteProps) {
-  const [isOpen, setIsOpen] = useState(false);
+export function CoaCommandPalette({ isOpen, onClose, fileTree, onFileSelect, onCreateNew }: CoaCommandPaletteProps) {
   const [search, setSearch] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [allFiles, setAllFiles] = useState<SearchResult[]>([]);
 
-  // Update file list whenever fileTree changes
-  useEffect(() => {
-    const files = flattenFiles(fileTree);
-    setAllFiles(files);
-    console.log('Command palette updated with', files.length, 'files');
-  }, [fileTree]);
+  // Flatten file tree to get all files
+  const allFiles = fileTree.flatMap(node => {
+    if (node.type === 'file') {
+      return [{ path: node.path, label: node.name, icon: <FileText className="w-4 h-4" style={{ color: 'hsl(210, 100%, 60%)' }} /> }];
+    }
+    if (node.children) {
+      return node.children
+        .filter(child => child.type === 'file')
+        .map(child => ({ path: child.path, label: child.name, icon: <FileText className="w-4 h-4" style={{ color: 'hsl(210, 100%, 60%)' }} /> }));
+    }
+    return [];
+  });
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        setIsOpen(prev => !prev);
-        setSearch('');
-        setSelectedIndex(0);
-      }
-
-      if (!isOpen) return;
-
-      if (e.key === 'Escape') {
-        setIsOpen(false);
-        setSearch('');
-      } else if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        setSelectedIndex(prev => Math.min(prev + 1, filteredResults.length - 1));
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        setSelectedIndex(prev => Math.max(prev - 1, 0));
-      } else if (e.key === 'Enter') {
-        e.preventDefault();
-        const selected = filteredResults[selectedIndex];
-        if (selected?.path) {
-          onFileSelect(selected.path);
-          setIsOpen(false);
-          setSearch('');
-        }
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, selectedIndex, search, onFileSelect]);
-
-  const actions: SearchResult[] = [
-    { type: 'action', label: 'Deploy Configuration', icon: <CommandIcon className="w-4 h-4 text-neon-green" /> },
-    { type: 'action', label: 'View Logs', icon: <CommandIcon className="w-4 h-4 text-neon-blue" /> },
-    { type: 'action', label: 'CoA Manager', icon: <CommandIcon className="w-4 h-4 text-neon-purple" /> },
+  // Add "Create New" action
+  const actions = [
+    { type: 'action', label: 'Create New COA File', icon: <Zap className="w-4 h-4" style={{ color: 'hsl(145, 80%, 55%)' }} />, action: onCreateNew },
   ];
 
   const filteredResults = [
@@ -93,9 +40,47 @@ export function CommandPalette({ onFileSelect, fileTree }: CommandPaletteProps) 
     ...actions.filter(a => a.label.toLowerCase().includes(search.toLowerCase())),
   ];
 
+  // Keyboard navigation
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedIndex(prev => Math.min(prev + 1, filteredResults.length - 1));
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedIndex(prev => Math.max(prev - 1, 0));
+      } else if (e.key === 'Enter' && filteredResults[selectedIndex]) {
+        const result = filteredResults[selectedIndex];
+        if ('path' in result) {
+          onFileSelect(result.path);
+        } else if ('action' in result) {
+          result.action();
+        }
+        onClose();
+        setSearch('');
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, selectedIndex, filteredResults, onFileSelect, onClose]);
+
+  // Reset selection when search changes
   useEffect(() => {
     setSelectedIndex(0);
   }, [search]);
+
+  // Reset when dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      setSearch('');
+      setSelectedIndex(0);
+    }
+  }, [isOpen]);
 
   return (
     <AnimatePresence>
@@ -108,7 +93,7 @@ export function CommandPalette({ onFileSelect, fileTree }: CommandPaletteProps) 
             exit={{ opacity: 0, backdropFilter: 'blur(0px)' }}
             className="fixed inset-0 z-50"
             style={{ backgroundColor: 'rgba(0, 0, 0, 0.75)' }}
-            onClick={() => setIsOpen(false)}
+            onClick={onClose}
           />
 
           {/* Modal with animated gradient border */}
@@ -149,7 +134,7 @@ export function CommandPalette({ onFileSelect, fileTree }: CommandPaletteProps) 
                 <Search className="w-5 h-5" style={{ color: 'hsl(215, 15%, 55%)' }} />
                 <input
                   type="text"
-                  placeholder="Search files and actions..."
+                  placeholder="Search COA files and actions..."
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                   className="flex-1 bg-transparent outline-none"
@@ -164,25 +149,33 @@ export function CommandPalette({ onFileSelect, fileTree }: CommandPaletteProps) 
               {/* Results */}
               <div className="max-h-96 overflow-y-auto">
                 {filteredResults.length === 0 ? (
-                  <div className="p-4 text-center text-muted-foreground text-sm">
+                  <div className="p-4 text-center text-sm" style={{ color: 'hsl(215, 15%, 55%)' }}>
                     No results found
                   </div>
                 ) : (
                   filteredResults.map((result, index) => (
                     <div
-                      key={index}
+                      key={'path' in result ? result.path : result.label}
                       className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${index === selectedIndex ? 'bg-primary/10' : 'hover:bg-secondary/50'
                         }`}
+                      style={{
+                        backgroundColor: index === selectedIndex ? 'rgba(122, 162, 247, 0.1)' : 'transparent',
+                      }}
+                      onMouseEnter={() => setSelectedIndex(index)}
                       onClick={() => {
-                        if (result.path) {
+                        if ('path' in result) {
                           onFileSelect(result.path);
-                          setIsOpen(false);
-                          setSearch('');
+                        } else if ('action' in result) {
+                          result.action();
                         }
+                        onClose();
+                        setSearch('');
                       }}
                     >
                       {result.icon}
-                      <span className="text-sm text-foreground">{result.label}</span>
+                      <span className="text-sm" style={{ color: 'hsl(210, 40%, 92%)' }}>
+                        {result.label}
+                      </span>
                     </div>
                   ))
                 )}
@@ -194,4 +187,3 @@ export function CommandPalette({ onFileSelect, fileTree }: CommandPaletteProps) 
     </AnimatePresence>
   );
 }
-

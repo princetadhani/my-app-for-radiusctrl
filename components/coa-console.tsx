@@ -39,8 +39,13 @@ export const CoaConsole = forwardRef<CoaConsoleHandle, CoaConsoleProps>(
     const [lines, setLines] = useState<AnimatedLine[]>([]);
     const [showPlaneAnimation, setShowPlaneAnimation] = useState(false);
     const [planeDestination, setPlaneDestination] = useState({ x: 0, y: 0 });
+    const [isMounted, setIsMounted] = useState(false);
     const consoleRef = useRef<HTMLDivElement>(null);
     const animationRef = useRef<NodeJS.Timeout | null>(null);
+
+    useEffect(() => {
+      setIsMounted(true);
+    }, []);
 
     useEffect(() => {
       if (consoleRef.current) {
@@ -298,12 +303,12 @@ export const CoaConsole = forwardRef<CoaConsoleHandle, CoaConsoleProps>(
             {/* Clear Button */}
             <button
               onClick={handleClear}
-              disabled={lines.length === 0}
+              disabled={!isMounted || lines.length === 0}
               className="p-2 rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed"
               style={{
-                background: lines.length > 0 ? 'rgba(139, 148, 158, 0.1)' : 'rgba(139, 148, 158, 0.05)',
+                background: isMounted && lines.length > 0 ? 'rgba(139, 148, 158, 0.1)' : 'rgba(139, 148, 158, 0.05)',
                 border: '1px solid rgba(139, 148, 158, 0.2)',
-                color: lines.length > 0 ? '#8b949e' : '#6e7681',
+                color: isMounted && lines.length > 0 ? '#8b949e' : '#6e7681',
               }}
               title="Clear logs"
             >
@@ -313,21 +318,21 @@ export const CoaConsole = forwardRef<CoaConsoleHandle, CoaConsoleProps>(
             {/* Send Button - Matching shape of New/Delete/Save */}
             <button
               onClick={handleSend}
-              disabled={isRunning || disabled}
+              disabled={!isMounted || isRunning || disabled}
               className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold transition-all relative overflow-hidden group disabled:opacity-40 disabled:cursor-not-allowed"
               style={{
-                background: !isRunning && !disabled
+                background: isMounted && !isRunning && !disabled
                   ? 'linear-gradient(135deg, rgba(158, 206, 106, 0.2), rgba(158, 206, 106, 0.15))'
                   : 'rgba(139, 148, 158, 0.1)',
-                border: !isRunning && !disabled
+                border: isMounted && !isRunning && !disabled
                   ? '1px solid rgba(158, 206, 106, 0.4)'
                   : '1px solid rgba(139, 148, 158, 0.2)',
-                color: !isRunning && !disabled ? '#9ece6a' : '#8b949e',
-                boxShadow: !isRunning && !disabled ? '0 0 12px rgba(158, 206, 106, 0.3)' : 'none',
+                color: isMounted && !isRunning && !disabled ? '#9ece6a' : '#8b949e',
+                boxShadow: isMounted && !isRunning && !disabled ? '0 0 12px rgba(158, 206, 106, 0.3)' : 'none',
               }}
             >
               {/* Shimmer effect */}
-              {!isRunning && !disabled && (
+              {isMounted && !isRunning && !disabled && (
                 <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
               )}
               <Send className={`h-3.5 w-3.5 relative z-10 ${isRunning ? 'animate-pulse' : ''}`} />
