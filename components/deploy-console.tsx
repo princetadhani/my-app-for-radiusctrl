@@ -298,7 +298,7 @@ export const DeployConsole = forwardRef<DeployConsoleHandle>((_props, ref) => {
           {/* Clear Button */}
           <button
             onClick={handleClear}
-            disabled={lines.length === 0}
+            disabled={lines.length === 0 ? true : false}
             className="p-1.5 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             title="Clear logs"
           >

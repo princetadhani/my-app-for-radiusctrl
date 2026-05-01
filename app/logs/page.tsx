@@ -13,7 +13,13 @@ export default function LogsPage() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const consoleRef = useRef<HTMLDivElement>(null);
+
+  // Ensure component is mounted before rendering interactive elements
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Load initial logs and scroll to bottom
   useEffect(() => {
@@ -346,12 +352,12 @@ export default function LogsPage() {
                 {/* Clear Button */}
                 <button
                   onClick={handleClear}
-                  disabled={logs.length === 0}
+                  disabled={!isMounted || logs.length === 0}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all relative overflow-hidden group disabled:opacity-40 disabled:cursor-not-allowed"
                   style={{
-                    background: logs.length > 0 ? 'rgba(237, 135, 150, 0.15)' : 'rgba(139, 148, 158, 0.1)',
-                    border: logs.length > 0 ? '1px solid rgba(237, 135, 150, 0.3)' : '1px solid rgba(139, 148, 158, 0.2)',
-                    color: logs.length > 0 ? '#ed8796' : '#8b949e',
+                    background: isMounted && logs.length > 0 ? 'rgba(237, 135, 150, 0.15)' : 'rgba(139, 148, 158, 0.1)',
+                    border: isMounted && logs.length > 0 ? '1px solid rgba(237, 135, 150, 0.3)' : '1px solid rgba(139, 148, 158, 0.2)',
+                    color: isMounted && logs.length > 0 ? '#ed8796' : '#8b949e',
                   }}
                 >
                   <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
@@ -362,16 +368,16 @@ export default function LogsPage() {
                 {/* Download Button */}
                 <button
                   onClick={handleDownload}
-                  disabled={logs.length === 0}
+                  disabled={!isMounted || logs.length === 0}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all relative overflow-hidden group disabled:opacity-40 disabled:cursor-not-allowed"
                   style={{
-                    background: logs.length > 0
+                    background: isMounted && logs.length > 0
                       ? 'linear-gradient(135deg, rgba(122, 162, 247, 0.15), rgba(187, 154, 247, 0.15))'
                       : 'rgba(139, 148, 158, 0.1)',
-                    border: logs.length > 0
+                    border: isMounted && logs.length > 0
                       ? '1px solid rgba(122, 162, 247, 0.3)'
                       : '1px solid rgba(139, 148, 158, 0.2)',
-                    color: logs.length > 0 ? '#7aa2f7' : '#8b949e',
+                    color: isMounted && logs.length > 0 ? '#7aa2f7' : '#8b949e',
                   }}
                 >
                   <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
