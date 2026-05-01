@@ -259,28 +259,8 @@ function CustomToastComponent({ variant, message, onDismiss }: CustomToastConfig
               style={{
                 position: 'relative',
                 zIndex: 2,
-                filter: `drop-shadow(0 0 8px ${styles.glowColor})`,
               }}
             >
-              {/* Icon glow pulse */}
-              <motion.div
-                animate={{
-                  scale: [1, 1.3, 1],
-                  opacity: [0.5, 0.8, 0.5],
-                }}
-                transition={{
-                  duration: 1.5,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
-                style={{
-                  position: 'absolute',
-                  inset: '-4px',
-                  background: `radial-gradient(circle, ${styles.glowColor}60, transparent 70%)`,
-                  borderRadius: '50%',
-                  filter: 'blur(4px)',
-                }}
-              />
               <IconComponent size={20} style={{ color: styles.iconColor, flexShrink: 0, position: 'relative', zIndex: 1 }} strokeWidth={2} />
             </motion.div>
 
