@@ -220,24 +220,7 @@ function CustomToastComponent({ variant, message, onDismiss }: CustomToastConfig
               overflow: 'hidden',
             }}
           >
-            {/* Animated gradient overlay */}
-            <motion.div
-              animate={{
-                backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
-              }}
-              transition={{
-                duration: 3,
-                repeat: Infinity,
-                ease: "linear",
-              }}
-              style={{
-                position: 'absolute',
-                inset: 0,
-                background: styles.bgGradient,
-                backgroundSize: '200% 200%',
-                zIndex: 0,
-              }}
-            />
+
 
             {/* Animated scan line effect */}
             <motion.div
