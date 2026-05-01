@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Pause, Trash2, Download, FileText, Activity, PanelLeftClose, PanelLeft, ArrowDown } from 'lucide-react';
+import { Play, Pause, Trash2, Download, FileText, Activity, PanelLeftClose, PanelLeft, ArrowDown, Search, X, RotateCcw, ChevronUp, ChevronDown } from 'lucide-react';
 import { StatusHeader } from '@/components/status-header';
 import { Button } from '@/components/ui/button';
 import { readLogs, getSocket, type LogEntry } from '@/lib/api';
@@ -14,6 +14,9 @@ export default function LogsPage() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const consoleRef = useRef<HTMLDivElement>(null);
 
   // Ensure component is mounted before rendering interactive elements
@@ -108,6 +111,29 @@ export default function LogsPage() {
     }
   };
 
+  // Handle manual refresh
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      setLogs([]);
+      const freshLogs = await readLogs(100);
+      setLogs(freshLogs);
+      customToast.success('Logs refreshed successfully');
+
+      // Scroll to bottom after refresh
+      setTimeout(() => {
+        if (consoleRef.current) {
+          consoleRef.current.scrollTop = consoleRef.current.scrollHeight;
+        }
+      }, 100);
+    } catch (error) {
+      console.error('Error refreshing logs:', error);
+      customToast.error('Failed to refresh logs');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   const getLevelClass = (level: LogEntry['level']) => {
     switch (level) {
       case 'INFO':
@@ -123,8 +149,177 @@ export default function LogsPage() {
     }
   };
 
+  // Filter logs based on search query with useMemo for performance
+  const filteredLogs = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return logs;
+    }
+
+    const query = searchQuery.toLowerCase();
+    return logs.filter(log => {
+      const fullText = `${log.timestamp} [${log.level}] ${log.message}`.toLowerCase();
+      return fullText.includes(query);
+    });
+  }, [logs, searchQuery]);
+
+  // Get all match positions in filtered logs
+  const matchPositions = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+
+    const positions: Array<{ logIndex: number; matchNumber: number; charIndex: number }> = [];
+    const query = searchQuery.toLowerCase();
+
+    filteredLogs.forEach((log, logIndex) => {
+      const fullText = `${log.timestamp} [${log.level}] ${log.message}`.toLowerCase();
+      let startIndex = 0;
+      let matchNumber = 0;
+      let charIndex = fullText.indexOf(query, startIndex);
+
+      while (charIndex !== -1) {
+        positions.push({ logIndex, matchNumber, charIndex });
+        matchNumber++;
+        startIndex = charIndex + query.length;
+        charIndex = fullText.indexOf(query, startIndex);
+      }
+    });
+
+    return positions;
+  }, [filteredLogs, searchQuery]);
+
+  // Highlight matching text with different colors for current vs other matches
+  const highlightText = (text: string, globalMatchesInText: number[]) => {
+    if (!searchQuery.trim() || !text) return text;
+
+    const query = searchQuery.toLowerCase();
+    const lowerText = text.toLowerCase();
+    const parts: Array<{ text: string; isCurrent: boolean; isMatch: boolean }> = [];
+
+    let lastIndex = 0;
+    let matchNumber = 0;
+
+    let index = lowerText.indexOf(query);
+    while (index !== -1) {
+      // Add non-matching text before this match
+      if (index > lastIndex) {
+        parts.push({
+          text: text.substring(lastIndex, index),
+          isCurrent: false,
+          isMatch: false
+        });
+      }
+
+      // Check if this match is the current one
+      const isCurrent = globalMatchesInText[matchNumber] === currentMatchIndex;
+
+      // Add the matching text
+      parts.push({
+        text: text.substring(index, index + query.length),
+        isCurrent,
+        isMatch: true
+      });
+
+      lastIndex = index + query.length;
+      matchNumber++;
+      index = lowerText.indexOf(query, lastIndex);
+    }
+
+    // Add remaining text
+    if (lastIndex < text.length) {
+      parts.push({
+        text: text.substring(lastIndex),
+        isCurrent: false,
+        isMatch: false
+      });
+    }
+
+    return (
+      <>
+        {parts.map((part, i) => {
+          if (!part.isMatch) return <span key={i}>{part.text}</span>;
+
+          if (part.isCurrent) {
+            // Current match - BRIGHT ORANGE highlighting with high contrast
+            return (
+              <span
+                key={i}
+                style={{
+                  backgroundColor: '#ff6600',
+                  color: '#000000',
+                  fontWeight: '800',
+                  padding: '3px 6px',
+                  borderRadius: '4px',
+                  boxShadow: '0 0 12px rgba(255, 102, 0, 0.8), 0 0 24px rgba(255, 102, 0, 0.4)',
+                  border: '1px solid #ff8800',
+                  display: 'inline-block'
+                }}
+              >
+                {part.text}
+              </span>
+            );
+          } else {
+            // Other matches - subtle gold highlighting
+            return (
+              <span
+                key={i}
+                style={{
+                  backgroundColor: 'rgba(255, 215, 0, 0.3)',
+                  color: '#ffd700',
+                  padding: '2px 4px',
+                  borderRadius: '3px',
+                  fontWeight: '500'
+                }}
+              >
+                {part.text}
+              </span>
+            );
+          }
+        })}
+      </>
+    );
+  };
+
+  const handleClearSearch = () => {
+    setSearchQuery('');
+    setCurrentMatchIndex(0);
+  };
+
+  const handleNextMatch = () => {
+    if (matchPositions.length === 0) return;
+    setCurrentMatchIndex((prev) => (prev + 1) % matchPositions.length);
+  };
+
+  const handlePreviousMatch = () => {
+    if (matchPositions.length === 0) return;
+    setCurrentMatchIndex((prev) => (prev - 1 + matchPositions.length) % matchPositions.length);
+  };
+
+  // Auto-scroll to current match
+  useEffect(() => {
+    if (matchPositions.length === 0 || !consoleRef.current) return;
+
+    // Find the log element for the current match
+    const currentMatch = matchPositions[currentMatchIndex];
+    if (!currentMatch) return;
+
+    // Scroll to the log line containing the current match
+    // Using a timeout to ensure DOM is updated
+    setTimeout(() => {
+      if (consoleRef.current) {
+        const logElements = consoleRef.current.querySelectorAll('.log-line');
+        const targetElement = logElements[currentMatch.logIndex] as HTMLElement;
+
+        if (targetElement) {
+          targetElement.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
+          });
+        }
+      }
+    }, 100);
+  }, [currentMatchIndex, matchPositions]);
+
   const getLevelCount = (level: LogEntry['level']) => {
-    return logs.filter(log => log.level === level).length;
+    return filteredLogs.filter(log => log.level === level).length;
   };
 
   return (
@@ -192,12 +387,16 @@ export default function LogsPage() {
                 {/* Log Statistics */}
                 <div className="space-y-2">
                   <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                    Statistics
+                    Statistics {searchQuery && <span className="text-amber-500">(Filtered)</span>}
                   </h4>
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground">Total Entries</span>
-                      <span className="font-mono font-medium">{logs.length}</span>
+                      <span className="text-muted-foreground">
+                        {searchQuery ? 'Showing' : 'Total Entries'}
+                      </span>
+                      <span className="font-mono font-medium">
+                        {searchQuery ? `${filteredLogs.length} / ${logs.length}` : logs.length}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between text-xs">
                       <span className="flex items-center gap-1.5">
@@ -257,8 +456,105 @@ export default function LogsPage() {
                 <span className="text-sm font-mono text-foreground">Log Viewer</span>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Activity className="w-3 h-3" />
-                  <span>{logs.length} lines</span>
+                  <span>{filteredLogs.length} / {logs.length} lines</span>
                 </div>
+                {searchQuery && matchPositions.length > 0 && (
+                  <motion.div
+                    className="flex items-center gap-1.5 text-xs"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <span className="text-orange-500 font-semibold">
+                      {currentMatchIndex + 1} / {matchPositions.length}
+                    </span>
+                    <span className="text-muted-foreground">
+                      {matchPositions.length === 1 ? 'match' : 'matches'}
+                    </span>
+                  </motion.div>
+                )}
+              </div>
+
+              {/* Search and Controls */}
+              <div className="flex items-center gap-2">
+                {/* Search Bar */}
+                <motion.div
+                  className="relative"
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.1 }}
+                >
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setCurrentMatchIndex(0);
+                    }}
+                    placeholder="Search logs..."
+                    className="w-56 pl-8 pr-8 py-1.5 rounded-lg text-xs bg-secondary/50 border border-border text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all"
+                    style={{
+                      fontFamily: 'var(--font-jetbrains-mono), monospace',
+                    }}
+                  />
+                  {searchQuery && (
+                    <motion.button
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      exit={{ scale: 0 }}
+                      onClick={handleClearSearch}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      title="Clear search"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </motion.button>
+                  )}
+                </motion.div>
+
+                {/* Match Navigation Buttons */}
+                {searchQuery && matchPositions.length > 0 && (
+                  <motion.div
+                    className="flex items-center border border-border rounded overflow-hidden"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <motion.button
+                      onClick={handlePreviousMatch}
+                      whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
+                      whileTap={{ scale: 0.95 }}
+                      className="p-1 text-muted-foreground hover:text-foreground transition-colors border-r border-border"
+                      title={`Previous match (${currentMatchIndex} / ${matchPositions.length})`}
+                    >
+                      <ChevronUp className="w-3.5 h-3.5" />
+                    </motion.button>
+                    <motion.button
+                      onClick={handleNextMatch}
+                      whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
+                      whileTap={{ scale: 0.95 }}
+                      className="p-1 text-muted-foreground hover:text-foreground transition-colors"
+                      title={`Next match (${currentMatchIndex + 2} / ${matchPositions.length})`}
+                    >
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    </motion.button>
+                  </motion.div>
+                )}
+
+                {/* Refresh Button */}
+                {isMounted && (
+                  <motion.button
+                    onClick={handleRefresh}
+                    disabled={isRefreshing}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className={`p-1.5 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-all ${isRefreshing ? 'opacity-50 cursor-not-allowed' : ''
+                      }`}
+                    title="Refresh logs"
+                  >
+                    <RotateCcw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  </motion.button>
+                )}
               </div>
             </div>
 
@@ -269,25 +565,36 @@ export default function LogsPage() {
             >
               {logs.length === 0 ? (
                 <div className="text-muted-foreground">No logs available</div>
+              ) : filteredLogs.length === 0 ? (
+                <div className="text-muted-foreground">
+                  No logs match search: <span className="text-amber-500 font-medium">{searchQuery}</span>
+                </div>
               ) : (
-                logs.map((log, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, x: -8 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.15 }}
-                    className="mb-1 flex items-start gap-2"
-                  >
-                    <span className="text-muted-foreground/50 select-none w-10 text-right">{index + 1}</span>
-                    <span className="text-muted-foreground">{log.timestamp}</span>
-                    {' '}
-                    <span className={`font-semibold ${getLevelClass(log.level)}`}>
-                      [{log.level}]
-                    </span>
-                    {' '}
-                    <span className="text-foreground">{log.message}</span>
-                  </motion.div>
-                ))
+                filteredLogs.map((log, logIndex) => {
+                  // Get all global match indices for this log
+                  const matchesInThisLog = matchPositions
+                    .map((pos, globalIdx) => pos.logIndex === logIndex ? globalIdx : -1)
+                    .filter(idx => idx !== -1);
+
+                  return (
+                    <motion.div
+                      key={logIndex}
+                      initial={{ opacity: 0, x: -8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.15 }}
+                      className="mb-1 flex items-start gap-2 log-line"
+                    >
+                      <span className="text-muted-foreground/50 select-none w-10 text-right">{logIndex + 1}</span>
+                      <span className="text-muted-foreground">{highlightText(log.timestamp, matchesInThisLog)}</span>
+                      {' '}
+                      <span className={`font-semibold ${getLevelClass(log.level)}`}>
+                        [{highlightText(log.level, matchesInThisLog)}]
+                      </span>
+                      {' '}
+                      <span className="text-foreground">{highlightText(log.message, matchesInThisLog)}</span>
+                    </motion.div>
+                  );
+                })
               )}
             </div>
 
