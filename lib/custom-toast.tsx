@@ -214,8 +214,8 @@ function CustomToastComponent({ variant, message, onDismiss }: CustomToastConfig
               alignItems: 'center',
               gap: '0.875rem',
               fontSize: '0.875rem',
-              minWidth: '480px',
-              maxWidth: '480px',
+              width: 'auto',
+              whiteSpace: 'nowrap',
               position: 'relative',
               overflow: 'hidden',
             }}
