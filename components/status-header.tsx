@@ -71,7 +71,7 @@ export function StatusHeader({ currentFile, onNewUserClick }: StatusHeaderProps)
         </Link>
 
         {/* Vertical Separator */}
-        <div className="w-px h-4 bg-border mx-3" style={{ backgroundColor: 'hsl(225, 15%, 18%)' }} />
+        <div className="w-px h-4 bg-border mx-1" style={{ backgroundColor: 'hsl(225, 15%, 18%)' }} />
 
         {/* Status Indicator */}
         <div className="flex items-center gap-2">
@@ -94,7 +94,7 @@ export function StatusHeader({ currentFile, onNewUserClick }: StatusHeaderProps)
         </div>
 
         {/* Vertical Separator */}
-        <div className="w-px h-4 bg-border mx-3" style={{ backgroundColor: 'hsl(225, 15%, 18%)' }} />
+        <div className="w-px h-4 bg-border mx-1" style={{ backgroundColor: 'hsl(225, 15%, 18%)' }} />
 
         {/* Current File Path (optional) */}
         {currentFile && (
