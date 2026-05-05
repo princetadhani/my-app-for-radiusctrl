@@ -50,10 +50,10 @@ echo ""
 echo -e "${BLUE}[1/6] Checking prerequisites...${NC}"
 
 # Check for required commands
-for cmd in curl wget tar; do
+for cmd in curl wget tar acl; do
     if ! command -v $cmd &> /dev/null; then
         echo "Installing $cmd..."
-        apt-get update && apt-get install -y $cmd
+        apt-get update -qq && apt-get install -y $cmd
     fi
 done
 

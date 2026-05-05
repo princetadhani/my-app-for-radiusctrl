@@ -127,7 +127,18 @@ if command -v setfacl >/dev/null 2>&1; then
     sudo setfacl -d -m u::rw-,g::rw-,o::r-- $USERS_DIR
     echo "  ✓ users.d ACLs: Configured to force 660 on new files"
 else
-    echo "  ⚠️ setfacl not found. File group will be inherited, but strict 660 depends on your umask."
+    echo "  ⚠️ setfacl not found. Installing acl package..."
+    if command -v apt-get >/dev/null 2>&1; then
+        sudo apt-get update -qq && sudo apt-get install -y acl >/dev/null 2>&1
+        sudo setfacl -d -m u::rw-,g::rw-,o::r-- $USERS_DIR
+        echo "  ✓ users.d ACLs: Configured to force 660 on new files"
+    elif command -v yum >/dev/null 2>&1; then
+        sudo yum install -y acl >/dev/null 2>&1
+        sudo setfacl -d -m u::rw-,g::rw-,o::r-- $USERS_DIR
+        echo "  ✓ users.d ACLs: Configured to force 660 on new files"
+    else
+        echo "  ⚠️ Could not install acl. File group will be inherited, but strict 660 depends on your umask."
+    fi
 fi
 
 # Create Symlink
