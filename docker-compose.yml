@@ -1,0 +1,102 @@
+# ============================================
+# FreeRADIUS Control Panel - Docker Compose
+# ============================================
+# This compose file provides a complete, portable deployment
+# that works on any device without configuration changes.
+#
+# PREREQUISITES:
+#   1. Run setup-permissions.sh on the host BEFORE starting
+#   2. Ensure FreeRADIUS is installed and running on host
+#   3. Ensure host user has UID 1000 (or modify user: in service)
+#
+# USAGE:
+#   docker-compose up -d
+#
+# ACCESS:
+#   http://<your-host-ip>
+# ============================================
+
+version: '3.8'
+
+services:
+  freeradius-control:
+    image: freeradius-control:latest
+    container_name: freeradius-control
+    
+    # Build configuration
+    build:
+      context: .
+      dockerfile: Dockerfile
+    
+    # Port mapping
+    # Internal port 80 (nginx) -> Host port 80
+    # Users access via http://<host-ip>
+    ports:
+      - "80:80"
+    
+    # Volume mounts
+    # These bind host directories to container paths
+    volumes:
+      # FreeRADIUS configuration directory (REQUIRED)
+      - /etc/freeradius/3.0:/etc/freeradius/3.0
+      
+      # FreeRADIUS log directory (REQUIRED for log streaming)
+      - /var/log/freeradius:/var/log/freeradius
+      
+      # Systemd socket for service control (REQUIRED)
+      - /run/systemd/private:/run/systemd/private
+      
+      # D-Bus socket for systemd communication (REQUIRED)
+      - /var/run/dbus:/var/run/dbus
+    
+    # Environment variables
+    # These override defaults in Dockerfile
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - FREERADIUS_BASE_DIR=/etc/freeradius/3.0
+      - FREERADIUS_LOG_FILE=/var/log/freeradius/radius.log
+      - FREERADIUS_COA_DIR=/etc/freeradius/3.0/coa
+      - FREERADIUS_SERVICE_NAME=freeradius
+      - WEBSOCKET_CORS_ORIGIN=*
+    
+    # Restart policy
+    # Container will restart automatically after host reboot
+    restart: unless-stopped
+    
+    # Privileged mode and capabilities
+    # Required for:
+    #   1. Controlling host's FreeRADIUS systemd service
+    #   2. Accessing host's systemd via socket
+    #   3. Executing sudo commands for service control
+    privileged: true
+    
+    # Alternative to privileged: true (more restrictive)
+    # Uncomment these and remove 'privileged: true' for better security
+    # cap_add:
+    #   - SYS_ADMIN
+    #   - DAC_OVERRIDE
+    #   - CHOWN
+    #   - FOWNER
+    
+    # PID namespace
+    # Share host PID namespace to control host services
+    pid: host
+    
+    # Network mode
+    network_mode: bridge
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/api/health"]
+      interval: 30s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
+    
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

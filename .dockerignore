@@ -1,0 +1,82 @@
+# ============================================
+# Docker Ignore File
+# ============================================
+# Excludes unnecessary files from Docker build context
+# This speeds up builds and reduces image size
+# ============================================
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+docs/
+READ_ONLY_FILES_IMPLEMENTATION.md
+SETUP_GUIDE.md
+project_explain.md
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+backend/combined.log
+backend/error.log
+
+# Development
+.env.local
+.env.development
+.env.test
+.env*.local
+
+# Dependencies (will be installed in container)
+node_modules/
+backend/node_modules/
+
+# Build outputs (will be built in container)
+.next/
+backend/dist/
+out/
+dist/
+
+# Testing
+coverage/
+.nyc_output/
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+__tests__/
+__mocks__/
+
+# Distribution
+dist/
+*.tar
+*.tar.gz
+
+# Temporary files
+tmp/
+temp/
+.cache/
+
+# Scripts (not needed in container)
+scripts/setup.sh
+
+# Docker files (not needed inside container)
+docker-compose.yml
+Dockerfile
+.dockerignore

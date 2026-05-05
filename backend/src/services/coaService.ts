@@ -1,0 +1,212 @@
+import fs from 'fs/promises';
+import path from 'path';
+import config from '../config';
+import logger from '../utils/logger';
+import { getSafePath, isValidIpAddress, sanitizeFileName, isValidCoaRequestType } from '../utils/security';
+import { radclient } from '../utils/hostCommand';
+
+export interface CoaRequest {
+  type: 'coa' | 'disconnect';
+  nasIp: string;
+  nasSecret: string;
+  attributes: string;
+  fileName?: string;
+}
+
+export interface CoaResponse {
+  success: boolean;
+  output: string;
+  fileName?: string;
+}
+
+/**
+ * Create COA file in the COA directory
+ * Files are created with freerad:freerad ownership to match FreeRADIUS files
+ * If attributes is empty, a default template is used
+ */
+export async function createCoaFile(
+  fileName: string,
+  attributes: string
+): Promise<{ success: boolean; filePath: string }> {
+  try {
+    logger.info(`createCoaFile called: fileName=${fileName}, attributes length=${attributes?.length}, first 50 chars=${attributes?.substring(0, 50)}`);
+
+    // Ensure COA directory exists
+    await fs.mkdir(config.freeradius.coaDir, { recursive: true });
+
+    // SECURE: Sanitize filename using security utility
+    const sanitizedName = sanitizeFileName(fileName);
+    const fullFileName = sanitizedName.endsWith('.txt')
+      ? sanitizedName
+      : `${sanitizedName}.txt`;
+
+    // SECURE: Use getSafePath to prevent directory traversal
+    const filePath = getSafePath(config.freeradius.coaDir, fullFileName);
+
+    // Use provided attributes or default template
+    let content = attributes;
+
+    // If no attributes provided, use default template
+    if (!attributes || attributes.trim() === '') {
+      content = `# Default template for COA file
+# Uncomment and modify the attributes you need
+
+# User-Name = "prince"
+# NAS-IP-Address = 10.86.88.193
+# Session-Timeout = 10
+# Tunnel-Type = 13
+# Tunnel-Medium-Type = IEEE-802
+# Tunnel-Private-Group-Id = "3005"
+# Wibhu-User-BW-DL = 40000
+# Wibhu-User-BW-UL = 4000
+# Acct-Interim-Interval = 123
+# Session-Timeout = 3600
+# Acct-Session-Id = "SESSION_ID"
+`;
+    }
+
+    // Write content to file
+    logger.info(`Writing to ${filePath}, content length: ${content.length}, first 50 chars: ${content.substring(0, 50)}`);
+    await fs.writeFile(filePath, content, 'utf-8');
+
+    // Verify write by reading back immediately
+    const verifyContent = await fs.readFile(filePath, 'utf-8');
+    logger.info(`Verified write: length=${verifyContent.length}, matches=${content === verifyContent}, first 50 chars: ${verifyContent.substring(0, 50)}`);
+
+    // Get COA directory stats to match ownership
+    try {
+      const dirStats = await fs.stat(config.freeradius.coaDir);
+
+      // Set ownership to match COA directory (freerad:freerad)
+      await fs.chown(filePath, dirStats.uid, dirStats.gid);
+
+      // Set permissions: rw-rw-r-- (664)
+      await fs.chmod(filePath, 0o664);
+
+      logger.info(`COA file created: ${filePath} (${dirStats.uid}:${dirStats.gid})`);
+    } catch (chownError: any) {
+      // If chown fails, log warning but continue
+      logger.warn(`Could not set ownership for ${filePath}: ${chownError.message}`);
+    }
+
+    return {
+      success: true,
+      filePath,
+    };
+  } catch (error: any) {
+    logger.error(`Error creating COA file: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
+ * Execute COA/Disconnect command using radclient
+ */
+export async function executeCoaCommand(request: CoaRequest): Promise<CoaResponse> {
+  try {
+    // SECURE: Validate IP address
+    if (!isValidIpAddress(request.nasIp)) {
+      throw new Error('Invalid NAS IP address format.');
+    }
+
+    // SECURE: Validate request type
+    if (!isValidCoaRequestType(request.type)) {
+      throw new Error('Invalid request type. Must be "coa" or "disconnect".');
+    }
+
+    let filePath: string;
+
+    // Create COA file if not using existing one
+    if (!request.fileName) {
+      const timestamp = Date.now();
+      const autoFileName = `coa_${timestamp}`;
+      const result = await createCoaFile(autoFileName, request.attributes);
+      filePath = result.filePath;
+    } else {
+      // SECURE: Use getSafePath to prevent directory traversal
+      filePath = getSafePath(config.freeradius.coaDir, request.fileName);
+    }
+
+    // Build radclient command
+    const commandType = request.type === 'disconnect' ? 'disconnect' : 'coa';
+    const commandArgs = `-f ${filePath} -x -r 1 ${request.nasIp} ${commandType} ${request.nasSecret}`;
+
+    logger.info(`Executing COA command: radclient ${commandArgs}`);
+
+    // Execute command with timeout via host command utility
+    const { stdout, stderr } = await radclient(commandArgs, {
+      timeout: 10000,
+    });
+
+    const output = stdout + stderr;
+    const success = output.includes('CoA-ACK') || output.includes('Disconnect-ACK');
+
+    logger.info(`COA command result: ${success ? 'SUCCESS' : 'FAILED'}`);
+
+    return {
+      success,
+      output,
+      fileName: path.basename(filePath),
+    };
+  } catch (error: any) {
+    logger.error(`COA command error: ${error.message}`);
+
+    return {
+      success: false,
+      output: error.stderr || error.stdout || error.message,
+    };
+  }
+}
+
+/**
+ * List all COA files
+ */
+export async function listCoaFiles(): Promise<string[]> {
+  try {
+    await fs.mkdir(config.freeradius.coaDir, { recursive: true });
+    const files = await fs.readdir(config.freeradius.coaDir);
+    return files.filter(f => f.endsWith('.txt'));
+  } catch (error: any) {
+    logger.error(`Error listing COA files: ${error.message}`);
+    return [];
+  }
+}
+
+/**
+ * Get COA file content
+ */
+export async function getCoaFileContent(fileName: string): Promise<string> {
+  try {
+    // SECURE: Use getSafePath to prevent directory traversal
+    const filePath = getSafePath(config.freeradius.coaDir, fileName);
+    const content = await fs.readFile(filePath, 'utf-8');
+    logger.info(`getCoaFileContent: fileName=${fileName}, filePath=${filePath}, length=${content.length}, first 50 chars: ${content.substring(0, 50)}`);
+    return content;
+  } catch (error: any) {
+    logger.error(`Error reading COA file: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
+ * Delete COA file
+ */
+export async function deleteCoaFile(fileName: string): Promise<void> {
+  try {
+    // SECURE: Use getSafePath to prevent directory traversal
+    const filePath = getSafePath(config.freeradius.coaDir, fileName);
+    await fs.unlink(filePath);
+    logger.info(`COA file deleted: ${filePath}`);
+  } catch (error: any) {
+    logger.error(`Error deleting COA file: ${error.message}`);
+    throw error;
+  }
+}
+
+export default {
+  createCoaFile,
+  executeCoaCommand,
+  listCoaFiles,
+  getCoaFileContent,
+  deleteCoaFile,
+};
