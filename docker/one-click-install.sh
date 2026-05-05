@@ -124,7 +124,7 @@ echo -e "${BLUE}[3/6] Configuring host system permissions...${NC}"
 
 if [ -f "./scripts/setup-permissions.sh" ]; then
     chmod +x ./scripts/setup-permissions.sh
-    ./scripts/setup-permissions.sh
+    AUTO_YES=1 ./scripts/setup-permissions.sh
     echo -e "${GREEN}✓ Permissions configured${NC}"
 else
     echo -e "${YELLOW}⚠ setup-permissions.sh not found, skipping...${NC}"

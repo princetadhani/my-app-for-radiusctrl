@@ -21,7 +21,7 @@ echo ""
 cd "$(dirname "$0")/.."
 
 # Create distribution directory
-DIST_DIR="dist/freeradius-control-package"
+DIST_DIR="dist/freeradius-control-docker"
 rm -rf "$DIST_DIR"
 mkdir -p "$DIST_DIR"
 
@@ -37,12 +37,14 @@ else
     echo "   ✅ Image already exists: dist/freeradius-control.tar.gz"
 fi
 
-cp dist/freeradius-control.tar.gz "$DIST_DIR/"
+# Extract the .tar file from .tar.gz for the package
+echo "   Extracting .tar from .tar.gz..."
+gunzip -c dist/freeradius-control.tar.gz > "$DIST_DIR/freeradius-control.tar"
 echo "   ✅ Image copied"
 echo ""
 
-# 2. Copy scripts
-echo "2️⃣  Copying scripts..."
+# 2. Copy scripts and config
+echo "2️⃣  Copying scripts and configuration..."
 mkdir -p "$DIST_DIR/docker"
 cp docker/run.sh "$DIST_DIR/docker/"
 cp docker/load-image.sh "$DIST_DIR/docker/"
@@ -50,9 +52,12 @@ cp docker/one-click-install.sh "$DIST_DIR/docker/"
 cp docker/QUICKSTART.md "$DIST_DIR/docker/"
 cp docker/SCRIPTS_GUIDE.md "$DIST_DIR/docker/"
 
+# Copy docker-compose.yml to root of package
+cp docker-compose.yml "$DIST_DIR/"
+
 mkdir -p "$DIST_DIR/scripts"
 cp scripts/setup-permissions.sh "$DIST_DIR/scripts/"
-echo "   ✅ Scripts copied"
+echo "   ✅ Scripts and configuration copied"
 echo ""
 
 # 3. Copy documentation
@@ -117,8 +122,8 @@ echo ""
 # 6. Create archive
 echo "6️⃣  Creating final archive..."
 cd dist
-tar -czf freeradius-control-complete.tar.gz freeradius-control-package/
-FINAL_SIZE=$(du -h freeradius-control-complete.tar.gz | cut -f1)
+tar -czf freeradius-control-docker.tar.gz freeradius-control-docker/
+FINAL_SIZE=$(du -h freeradius-control-docker.tar.gz | cut -f1)
 cd ..
 echo "   ✅ Archive created"
 echo ""
@@ -133,7 +138,7 @@ echo "============================================"
 echo "✅ Distribution Package Created!"
 echo "============================================"
 echo ""
-echo "📦 Package: dist/freeradius-control-complete.tar.gz"
+echo "📦 Package: dist/freeradius-control-docker.tar.gz"
 echo "📏 Size: $FINAL_SIZE"
 echo ""
 echo "📋 Contents:"
@@ -142,8 +147,12 @@ echo "   - Setup scripts"
 echo "   - Documentation"
 echo "   - Quick start guide"
 echo ""
-echo "🚀 To distribute:"
-echo "   1. Share: dist/freeradius-control-complete.tar.gz"
-echo "   2. Recipients extract: tar -xzf freeradius-control-complete.tar.gz"
-echo "   3. Recipients follow: INSTALL.txt"
+echo "🚀 Upload to GitHub Releases:"
+echo "   1. Go to: https://github.com/princetadhani/my-app-for-radiusctrl/releases"
+echo "   2. Create new release"
+echo "   3. Upload: dist/freeradius-control-docker.tar.gz"
+echo "   4. File is already named correctly - no rename needed!"
+echo ""
+echo "📋 One-click install command for users:"
+echo "   curl -sSL https://raw.githubusercontent.com/princetadhani/my-app-for-radiusctrl/main/docker/one-click-install.sh | sudo bash"
 echo ""

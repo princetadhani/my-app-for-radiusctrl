@@ -58,15 +58,20 @@ echo "✅ Found FreeRADIUS group: $RADIUS_GROUP"
 echo "✅ Found directory: /etc/freeradius/3.0"
 echo ""
 
-# Confirm
-echo "Ready to proceed with user '$USER_NAME' in group '$RADIUS_GROUP'?"
-echo ""
+# Auto-proceed when called from one-click installer
+if [ -z "$AUTO_YES" ]; then
+    # Confirm
+    echo "Ready to proceed with user '$USER_NAME' in group '$RADIUS_GROUP'?"
+    echo ""
 
-read -p "Continue? (y/N) " -n 1 -r
-echo
-if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    echo "Cancelled."
-    exit 0
+    read -p "Continue? (y/N) " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "Cancelled."
+        exit 0
+    fi
+else
+    echo "Auto-proceeding with user '$USER_NAME' in group '$RADIUS_GROUP'..."
 fi
 
 echo ""
