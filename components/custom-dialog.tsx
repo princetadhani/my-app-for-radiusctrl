@@ -15,6 +15,7 @@ interface CustomDialogProps {
   defaultValue?: string;
   confirmText?: string;
   cancelText?: string;
+  existingFiles?: string[]; // For duplicate check
 }
 
 export function CustomDialog({
@@ -27,19 +28,62 @@ export function CustomDialog({
   defaultValue = '',
   confirmText = 'Create',
   cancelText = 'Cancel',
+  existingFiles = [],
 }: CustomDialogProps) {
   const [value, setValue] = useState(defaultValue);
+  const [error, setError] = useState('');
+
+  // Validation regex: alphanumeric, underscores, hyphens only
+  const fileNameRegex = /^[a-zA-Z0-9_-]+$/;
 
   useEffect(() => {
     if (isOpen) {
       setValue(defaultValue);
+      setError('');
     }
   }, [isOpen, defaultValue]);
 
+  // Real-time validation
+  useEffect(() => {
+    if (!value.trim()) {
+      setError('');
+      return;
+    }
+
+    // Check for spaces
+    if (/\s/.test(value)) {
+      setError('Filename cannot contain spaces');
+      return;
+    }
+
+    // Check for dots (extensions)
+    if (value.includes('.')) {
+      setError('Filename cannot contain dots');
+      return;
+    }
+
+    // Check for special characters
+    if (!fileNameRegex.test(value)) {
+      setError('Special characters are not allowed');
+      return;
+    }
+
+    // Check for duplicates
+    const fileNameWithExt = value.endsWith('.txt') ? value : `${value}.txt`;
+    if (existingFiles.some(f => f.toLowerCase() === fileNameWithExt.toLowerCase())) {
+      setError('File already exists');
+      return;
+    }
+
+    setError('');
+  }, [value, existingFiles, fileNameRegex]);
+
   const handleConfirm = () => {
-    if (value.trim()) {
+    if (value.trim() && !error) {
       onConfirm(value.trim());
       onClose();
+      setValue('');
+      setError('');
     }
   };
 
@@ -140,7 +184,7 @@ export function CustomDialog({
 
                 {/* Input with glow on focus */}
                 <motion.div
-                  className="mb-5"
+                  className="mb-3"
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 }}
@@ -155,19 +199,48 @@ export function CustomDialog({
                     className="w-full px-4 py-2.5 rounded-lg text-sm transition-all focus:outline-none"
                     style={{
                       backgroundColor: 'rgba(22, 27, 34, 0.8)',
-                      border: '1px solid rgba(122, 162, 247, 0.3)',
+                      border: error && value.trim() ? '1px solid rgba(237, 135, 150, 0.5)' : '1px solid rgba(122, 162, 247, 0.3)',
                       color: '#c9d1d9',
                       fontFamily: 'JetBrains Mono, monospace',
                     }}
                     onFocus={(e) => {
-                      e.target.style.borderColor = 'rgba(122, 162, 247, 0.6)';
-                      e.target.style.boxShadow = '0 0 15px rgba(122, 162, 247, 0.3)';
+                      if (!error || !value.trim()) {
+                        e.target.style.borderColor = 'rgba(122, 162, 247, 0.6)';
+                        e.target.style.boxShadow = '0 0 15px rgba(122, 162, 247, 0.3)';
+                      }
                     }}
                     onBlur={(e) => {
-                      e.target.style.borderColor = 'rgba(122, 162, 247, 0.3)';
-                      e.target.style.boxShadow = 'none';
+                      if (!error || !value.trim()) {
+                        e.target.style.borderColor = 'rgba(122, 162, 247, 0.3)';
+                        e.target.style.boxShadow = 'none';
+                      }
                     }}
                   />
+
+                  {/* Error message */}
+                  {error && value.trim() && (
+                    <motion.p
+                      className="text-xs mt-2"
+                      style={{ color: '#ed8796' }}
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                    >
+                      {error}
+                    </motion.p>
+                  )}
+
+                  {/* Helper text */}
+                  <motion.div
+                    className="text-xs mt-2"
+                    style={{ color: '#6e7681' }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.3 }}
+                  >
+                    • Only letters, numbers, underscores, and hyphens<br />
+                    • No spaces or special characters<br />
+                    • .txt extension will be added automatically
+                  </motion.div>
                 </motion.div>
 
                 {/* Actions */}
@@ -186,18 +259,18 @@ export function CustomDialog({
                   </button>
                   <button
                     onClick={handleConfirm}
-                    disabled={!value.trim()}
+                    disabled={!value.trim() || !!error}
                     className="px-5 py-2 text-sm rounded-lg font-medium transition-all relative overflow-hidden group"
                     style={{
-                      background: value.trim()
+                      background: value.trim() && !error
                         ? 'linear-gradient(135deg, #7aa2f7, #bb9af7)'
                         : 'rgba(122, 162, 247, 0.3)',
-                      color: value.trim() ? '#0d1117' : '#8b949e',
-                      cursor: value.trim() ? 'pointer' : 'not-allowed',
+                      color: value.trim() && !error ? '#0d1117' : '#8b949e',
+                      cursor: value.trim() && !error ? 'pointer' : 'not-allowed',
                     }}
                   >
                     {/* Shimmer effect */}
-                    {value.trim() && (
+                    {value.trim() && !error && (
                       <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
                     )}
                     <span className="relative z-10">{confirmText}</span>

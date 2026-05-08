@@ -16,6 +16,9 @@ export function NewUserDialog({ isOpen, onClose, onSuccess, onError }: NewUserDi
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState('');
 
+  // Validation regex: alphanumeric, underscores, hyphens only
+  const userNameRegex = /^[a-zA-Z0-9_-]+$/;
+
   useEffect(() => {
     if (isOpen) {
       setFilename('');
@@ -23,19 +26,37 @@ export function NewUserDialog({ isOpen, onClose, onSuccess, onError }: NewUserDi
     }
   }, [isOpen]);
 
-  const handleCreate = async () => {
-    // Clear previous errors
-    setError('');
-
-    // Basic validation
+  // Real-time validation
+  useEffect(() => {
     if (!filename.trim()) {
-      setError('Filename is required');
+      setError('');
       return;
     }
 
     // Check for spaces
     if (/\s/.test(filename)) {
       setError('Filename cannot contain spaces');
+      return;
+    }
+
+    // Check for dots (extensions)
+    if (filename.includes('.')) {
+      setError('Filename cannot contain dots');
+      return;
+    }
+
+    // Check for special characters
+    if (!userNameRegex.test(filename)) {
+      setError('Special characters are not allowed');
+      return;
+    }
+
+    setError('');
+  }, [filename, userNameRegex]);
+
+  const handleCreate = async () => {
+    // Don't proceed if there's a validation error
+    if (error || !filename.trim()) {
       return;
     }
 
@@ -189,24 +210,26 @@ export function NewUserDialog({ isOpen, onClose, onSuccess, onError }: NewUserDi
                     className="w-full px-4 py-2.5 rounded-lg text-sm transition-all focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{
                       backgroundColor: 'rgba(22, 27, 34, 0.8)',
-                      border: '1px solid rgba(122, 162, 247, 0.3)',
+                      border: error && filename.trim() ? '1px solid rgba(237, 135, 150, 0.5)' : '1px solid rgba(122, 162, 247, 0.3)',
                       color: '#c9d1d9',
                       fontFamily: 'JetBrains Mono, monospace',
                     }}
                     onFocus={(e) => {
-                      if (!isCreating) {
+                      if (!isCreating && (!error || !filename.trim())) {
                         e.target.style.borderColor = 'rgba(122, 162, 247, 0.6)';
                         e.target.style.boxShadow = '0 0 15px rgba(122, 162, 247, 0.3)';
                       }
                     }}
                     onBlur={(e) => {
-                      e.target.style.borderColor = 'rgba(122, 162, 247, 0.3)';
-                      e.target.style.boxShadow = 'none';
+                      if (!error || !filename.trim()) {
+                        e.target.style.borderColor = 'rgba(122, 162, 247, 0.3)';
+                        e.target.style.boxShadow = 'none';
+                      }
                     }}
                   />
 
                   {/* Error message */}
-                  {error && (
+                  {error && filename.trim() && (
                     <motion.p
                       className="text-xs mt-2"
                       style={{ color: '#ed8796' }}
@@ -225,9 +248,9 @@ export function NewUserDialog({ isOpen, onClose, onSuccess, onError }: NewUserDi
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.3 }}
                   >
-                    • Letters and numbers only (no spaces)<br />
-                    • Will be converted to lowercase<br />
-                    • Extensions will be ignored
+                    • Only letters, numbers, underscores, and hyphens<br />
+                    • No spaces or special characters<br />
+                    • Will be converted to lowercase
                   </motion.div>
                 </motion.div>
 
@@ -248,18 +271,18 @@ export function NewUserDialog({ isOpen, onClose, onSuccess, onError }: NewUserDi
                   </button>
                   <button
                     onClick={handleCreate}
-                    disabled={!filename.trim() || isCreating}
+                    disabled={!filename.trim() || isCreating || !!error}
                     className="px-5 py-2 text-sm rounded-lg font-medium transition-all relative overflow-hidden group flex items-center gap-2"
                     style={{
-                      background: filename.trim() && !isCreating
+                      background: filename.trim() && !isCreating && !error
                         ? 'linear-gradient(135deg, #7aa2f7, #bb9af7)'
                         : 'rgba(122, 162, 247, 0.3)',
-                      color: filename.trim() && !isCreating ? '#0d1117' : '#8b949e',
-                      cursor: filename.trim() && !isCreating ? 'pointer' : 'not-allowed',
+                      color: filename.trim() && !isCreating && !error ? '#0d1117' : '#8b949e',
+                      cursor: filename.trim() && !isCreating && !error ? 'pointer' : 'not-allowed',
                     }}
                   >
                     {/* Shimmer effect */}
-                    {filename.trim() && !isCreating && (
+                    {filename.trim() && !isCreating && !error && (
                       <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
                     )}
                     {isCreating && (

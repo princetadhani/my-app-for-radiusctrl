@@ -363,6 +363,11 @@ export default function CoaPage() {
                 placeholder="e.g. disconnect_user"
                 confirmText="Create"
                 cancelText="Cancel"
+                existingFiles={fileTree.flatMap(node => {
+                    if (node.type === 'file') return [node.name];
+                    if (node.children) return node.children.filter(c => c.type === 'file').map(c => c.name);
+                    return [];
+                })}
             />
             <ConfirmDialog
                 isOpen={isDeleteDialogOpen}
