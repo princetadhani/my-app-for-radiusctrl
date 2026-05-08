@@ -369,18 +369,37 @@ export const CoaConsole = forwardRef<CoaConsoleHandle, CoaConsoleProps>(
                         displayContent = text;
                       }
 
+                      const isFinalLine = line.type === 'final-success' || line.type === 'final-error';
                       return (
                         <motion.div
                           key={index}
-                          initial={{ opacity: 0, scale: 0.95 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          transition={{ duration: 0.3, ease: 'easeOut' }}
+                          initial={{ opacity: 0, scale: 0.96, filter: 'blur(1.5px)' }}
+                          animate={{
+                            opacity: 1,
+                            scale: 1,
+                            filter: 'blur(0px)',
+                            textShadow: isFinalLine ? [
+                              getTextGlow(line.type),
+                              getTextGlow(line.type).replace(/(\d+)px/, '15px'),
+                              getTextGlow(line.type).replace(/(\d+)px/, '12px')
+                            ] : getTextGlow(line.type)
+                          }}
+                          transition={{
+                            duration: 0.35,
+                            ease: [0.16, 1, 0.3, 1],
+                            textShadow: isFinalLine ? {
+                              duration: 0.8,
+                              ease: 'easeOut',
+                              times: [0, 0.5, 1]
+                            } : undefined
+                          }}
                           className={getOutputClass(line.type)}
                           style={{
                             textShadow: getTextGlow(line.type),
                             background: 'transparent',
                             backgroundColor: 'transparent',
-                            backdropFilter: 'none'
+                            backdropFilter: 'none',
+                            willChange: 'opacity, transform, filter'
                           }}
                         >
                           {displayContent}
