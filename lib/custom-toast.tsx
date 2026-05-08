@@ -207,7 +207,7 @@ function CustomToastComponent({ variant, message, onDismiss }: CustomToastConfig
               backdropFilter: 'blur(20px) saturate(180%)',
               WebkitBackdropFilter: 'blur(20px) saturate(180%)',
               border: `1.5px solid ${styles.borderColor}`,
-              borderRadius: '0.725rem',
+              borderRadius: '0.425rem',
               padding: '0.815rem 1.125rem',
               color: 'hsl(210, 40%, 96%)',
               display: 'flex',
