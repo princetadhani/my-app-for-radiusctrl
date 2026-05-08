@@ -309,6 +309,21 @@ function HomeContent() {
         onClose={() => setIsNewUserDialogOpen(false)}
         onSuccess={handleNewUserSuccess}
         onError={handleNewUserError}
+        existingUsers={fileTree.flatMap(node => {
+          // Look for users.d directory
+          if (node.type === 'directory' && node.name === 'mods-config' && node.children) {
+            const filesDir = node.children.find(child => child.name === 'files' && child.type === 'directory');
+            if (filesDir?.children) {
+              const usersDir = filesDir.children.find(child => child.name === 'users.d' && child.type === 'directory');
+              if (usersDir?.children) {
+                return usersDir.children
+                  .filter(child => child.type === 'file')
+                  .map(child => child.name);
+              }
+            }
+          }
+          return [];
+        })}
       />
     </div>
   );

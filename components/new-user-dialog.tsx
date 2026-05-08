@@ -9,9 +9,10 @@ interface NewUserDialogProps {
   onClose: () => void;
   onSuccess: (username: string) => void;
   onError: (message: string, validationOutput?: string) => void;
+  existingUsers?: string[]; // For duplicate check
 }
 
-export function NewUserDialog({ isOpen, onClose, onSuccess, onError }: NewUserDialogProps) {
+export function NewUserDialog({ isOpen, onClose, onSuccess, onError, existingUsers = [] }: NewUserDialogProps) {
   const [filename, setFilename] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState('');
@@ -51,8 +52,14 @@ export function NewUserDialog({ isOpen, onClose, onSuccess, onError }: NewUserDi
       return;
     }
 
+    // Check for duplicates (case-insensitive)
+    if (existingUsers.some(user => user.toLowerCase() === filename.toLowerCase())) {
+      setError('User already exists');
+      return;
+    }
+
     setError('');
-  }, [filename, userNameRegex]);
+  }, [filename, userNameRegex, existingUsers]);
 
   const handleCreate = async () => {
     // Don't proceed if there's a validation error
