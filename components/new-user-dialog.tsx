@@ -17,8 +17,8 @@ export function NewUserDialog({ isOpen, onClose, onSuccess, onError, existingUse
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState('');
 
-  // Validation regex: alphanumeric, underscores, hyphens only
-  const userNameRegex = /^[a-zA-Z0-9_-]+$/;
+  // Validation regex: alphanumeric only (no underscores or hyphens)
+  const userNameRegex = /^[a-zA-Z0-9]+$/;
 
   useEffect(() => {
     if (isOpen) {
@@ -46,9 +46,9 @@ export function NewUserDialog({ isOpen, onClose, onSuccess, onError, existingUse
       return;
     }
 
-    // Check for special characters
+    // Check for non-alphanumeric characters
     if (!userNameRegex.test(filename)) {
-      setError('Special characters are not allowed');
+      setError('Only letters and numbers are allowed');
       return;
     }
 
@@ -255,7 +255,7 @@ export function NewUserDialog({ isOpen, onClose, onSuccess, onError, existingUse
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.3 }}
                   >
-                    • Only letters, numbers, underscores, and hyphens<br />
+                    • Only letters and numbers allowed<br />
                     • No spaces or special characters<br />
                     • Will be converted to lowercase
                   </motion.div>
