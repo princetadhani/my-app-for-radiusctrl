@@ -357,7 +357,12 @@ export const DeployConsole = forwardRef<DeployConsoleHandle>((_props, ref) => {
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ duration: 0.3, ease: 'easeOut' }}
                       className={getOutputClass(line.type)}
-                      style={{ textShadow: getTextGlow(line.type) }}
+                      style={{
+                        textShadow: getTextGlow(line.type),
+                        background: 'transparent',
+                        backgroundColor: 'transparent',
+                        backdropFilter: 'none'
+                      }}
                     >
                       {line.displayedText}
                     </motion.div>

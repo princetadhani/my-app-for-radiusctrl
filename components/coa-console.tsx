@@ -376,7 +376,12 @@ export const CoaConsole = forwardRef<CoaConsoleHandle, CoaConsoleProps>(
                           animate={{ opacity: 1, scale: 1 }}
                           transition={{ duration: 0.3, ease: 'easeOut' }}
                           className={getOutputClass(line.type)}
-                          style={{ textShadow: getTextGlow(line.type) }}
+                          style={{
+                            textShadow: getTextGlow(line.type),
+                            background: 'transparent',
+                            backgroundColor: 'transparent',
+                            backdropFilter: 'none'
+                          }}
                         >
                           {displayContent}
                         </motion.div>
