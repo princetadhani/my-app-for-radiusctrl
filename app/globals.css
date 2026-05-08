@@ -130,23 +130,66 @@ body {
   background-size: 40px 40px;
 }
 
-/* Custom scrollbar */
+/* ============================================
+   HIDE ALL SCROLLBARS (Cross-Browser)
+   ============================================
+   Removes scrollbar UI while keeping scroll functionality
+   Works in Chrome, Safari, Edge, Firefox
+   ============================================ */
+
+/* Hide scrollbar for Webkit browsers (Chrome, Safari, Edge) */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 0px;
+  height: 0px;
+  display: none;
 }
 
 ::-webkit-scrollbar-track {
-  background: hsl(225 25% 6%);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: hsl(225 15% 14%);
-  border-radius: 3px;
+  background: transparent;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: hsl(215 15% 55%);
+/* Hide scrollbar for Firefox */
+* {
+  scrollbar-width: none;
+  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE and Edge (old) */
+}
+
+/* Additional hiding for specific scroll containers */
+html,
+body,
+div,
+section,
+main,
+aside,
+nav {
+  scrollbar-width: none;
+  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE and Edge */
+}
+
+/* Ensure overflow still works (just hide the scrollbar visual) */
+.overflow-auto,
+.overflow-y-auto,
+.overflow-x-auto,
+.overflow-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.overflow-auto::-webkit-scrollbar,
+.overflow-y-auto::-webkit-scrollbar,
+.overflow-x-auto::-webkit-scrollbar,
+.overflow-scroll::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 /* Animations */

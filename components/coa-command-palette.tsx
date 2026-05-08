@@ -147,7 +147,13 @@ export function CoaCommandPalette({ isOpen, onClose, fileTree, onFileSelect, onC
               </div>
 
               {/* Results */}
-              <div className="max-h-96 overflow-y-auto">
+              <div
+                className="max-h-96 overflow-y-auto"
+                style={{
+                  scrollbarWidth: 'none',
+                  msOverflowStyle: 'none',
+                } as React.CSSProperties}
+              >
                 {filteredResults.length === 0 ? (
                   <div className="p-4 text-center text-sm" style={{ color: 'hsl(215, 15%, 55%)' }}>
                     No results found

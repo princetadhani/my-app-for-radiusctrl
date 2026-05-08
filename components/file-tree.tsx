@@ -205,6 +205,10 @@ export function FileTree({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="overflow-y-auto py-2 h-full"
+            style={{
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none',
+            } as React.CSSProperties}
           >
             {nodes.map((node, index) => (
               <TreeNode

@@ -207,10 +207,11 @@ export function EditorPanel({ filePath, deployConsoleRef }: EditorPanelProps) {
         // Minimap background
         "minimap.background": "#0d1117",
 
-        // Scrollbar
+        // Scrollbar (hidden but functional)
         "scrollbar.shadow": "#00000000",
-        "scrollbarSlider.background": "#2a3040",
-        "scrollbarSlider.hoverBackground": "#3a4050",
+        "scrollbarSlider.background": "transparent",
+        "scrollbarSlider.hoverBackground": "transparent",
+        "scrollbarSlider.activeBackground": "transparent",
       },
     });
 
@@ -229,6 +230,23 @@ export function EditorPanel({ filePath, deployConsoleRef }: EditorPanelProps) {
 
     // Set tab size
     editor.getModel()?.updateOptions({ tabSize: 4 });
+
+    // Hide scrollbars completely (cross-browser)
+    const editorDomNode = editor.getDomNode();
+    if (editorDomNode) {
+      const style = editorDomNode.style;
+      style.setProperty('scrollbar-width', 'none', 'important'); // Firefox
+      style.setProperty('-ms-overflow-style', 'none', 'important'); // IE/Edge
+
+      // Hide scrollbars for all child elements
+      const scrollableElements = editorDomNode.querySelectorAll('.monaco-scrollable-element');
+      scrollableElements.forEach((el: Element) => {
+        if (el instanceof HTMLElement) {
+          el.style.setProperty('scrollbar-width', 'none', 'important');
+          el.style.setProperty('-ms-overflow-style', 'none', 'important');
+        }
+      });
+    }
   };
 
   // Show empty state when no file is selected
@@ -354,10 +372,13 @@ export function EditorPanel({ filePath, deployConsoleRef }: EditorPanelProps) {
             overviewRulerBorder: false,
             hideCursorInOverviewRuler: true,
 
-            // Scrollbar
+            // Scrollbar (hidden but functional)
             scrollbar: {
-              verticalScrollbarSize: 6,
-              horizontalScrollbarSize: 6,
+              vertical: 'hidden',
+              horizontal: 'hidden',
+              verticalScrollbarSize: 0,
+              horizontalScrollbarSize: 0,
+              useShadows: false,
             },
           }}
         />

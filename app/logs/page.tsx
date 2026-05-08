@@ -371,7 +371,11 @@ export default function LogsPage() {
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
                 className="p-4 space-y-6 overflow-y-auto"
-                style={{ height: 'calc(100% - 48px)' }}
+                style={{
+                  height: 'calc(100% - 48px)',
+                  scrollbarWidth: 'none',
+                  msOverflowStyle: 'none',
+                } as React.CSSProperties}
               >
                 {/* Stream Status */}
                 <div className="space-y-2">
@@ -562,6 +566,10 @@ export default function LogsPage() {
             <div
               ref={consoleRef}
               className="h-[calc(100%-40px)] p-4 font-mono text-xs overflow-y-auto"
+              style={{
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none',
+              } as React.CSSProperties}
             >
               {logs.length === 0 ? (
                 <div className="text-muted-foreground">No logs available</div>

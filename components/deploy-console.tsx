@@ -343,6 +343,10 @@ export const DeployConsole = forwardRef<DeployConsoleHandle>((_props, ref) => {
             <div
               ref={consoleRef}
               className="h-full overflow-auto bg-background/50 p-3"
+              style={{
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none',
+              } as React.CSSProperties}
             >
               <div className="font-mono text-xs text-foreground space-y-1">
                 {lines.length === 0 && !isRunning ? (

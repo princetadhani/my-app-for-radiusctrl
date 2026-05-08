@@ -162,7 +162,13 @@ export function CommandPalette({ onFileSelect, fileTree }: CommandPaletteProps) 
               </div>
 
               {/* Results */}
-              <div className="max-h-96 overflow-y-auto">
+              <div
+                className="max-h-96 overflow-y-auto"
+                style={{
+                  scrollbarWidth: 'none',
+                  msOverflowStyle: 'none',
+                } as React.CSSProperties}
+              >
                 {filteredResults.length === 0 ? (
                   <div className="p-4 text-center text-muted-foreground text-sm">
                     No results found
