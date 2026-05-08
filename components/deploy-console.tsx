@@ -30,7 +30,6 @@ export const DeployConsole = forwardRef<DeployConsoleHandle>((_props, ref) => {
   const [mode, setMode] = useState<ConsoleMode>('deploy');
   const [isMounted, setIsMounted] = useState(false);
   const consoleRef = useRef<HTMLDivElement>(null);
-  const animationRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -42,54 +41,18 @@ export const DeployConsole = forwardRef<DeployConsoleHandle>((_props, ref) => {
     }
   }, [lines]);
 
-  useEffect(() => {
-    return () => {
-      if (animationRef.current) {
-        clearTimeout(animationRef.current);
-      }
-    };
-  }, []);
-
-  const animateText = async (text: string, type: LineType, lineIndex: number) => {
-    const chars = text.split('');
-    for (let i = 0; i <= chars.length; i++) {
-      await new Promise(resolve => {
-        animationRef.current = setTimeout(resolve, 15); // 15ms per character for smooth typing
-      });
-
-      setLines(prev => {
-        const newLines = [...prev];
-        if (newLines[lineIndex]) {
-          newLines[lineIndex] = {
-            ...newLines[lineIndex],
-            displayedText: chars.slice(0, i).join(''),
-            isComplete: i === chars.length,
-          };
-        }
-        return newLines;
-      });
-    }
-  };
-
   const addLine = async (text: string, type: LineType, delay = 0) => {
     if (delay > 0) {
       await new Promise(resolve => setTimeout(resolve, delay));
     }
 
-    let lineIndex = 0;
-    setLines(prev => {
-      lineIndex = prev.length;
-      return [...prev, {
-        fullText: text,
-        displayedText: '',
-        type,
-        isComplete: false,
-      }];
-    });
-
-    // Small delay to ensure state update
-    await new Promise(resolve => setTimeout(resolve, 50));
-    await animateText(text, type, lineIndex);
+    // Add line with full text immediately - no character animation
+    setLines(prev => [...prev, {
+      fullText: text,
+      displayedText: text,
+      type,
+      isComplete: true,
+    }]);
   };
 
   const handleDeploy = async () => {
@@ -102,7 +65,7 @@ export const DeployConsole = forwardRef<DeployConsoleHandle>((_props, ref) => {
     try {
       // Step 1: Show command (matches backend actual command)
       await addLine('$ freeradius -CX /etc/freeradius/3.0', 'cmd', 0);
-      await addLine('Validating configuration...', 'info', 400);
+      await addLine('Validating configuration...', 'info', 150);
 
       // Step 2: Validate configuration
       setIsValidating(true);
@@ -111,13 +74,13 @@ export const DeployConsole = forwardRef<DeployConsoleHandle>((_props, ref) => {
 
       if (!validationResult.success) {
         // Validation failed - show detailed output
-        await addLine('ERROR: Configuration validation failed', 'error', 200);
+        await addLine('ERROR: Configuration validation failed', 'error', 100);
 
         // Show the actual error message from backend
         if (validationResult.error) {
           const errorLines = validationResult.error.split('\n').filter(line => line.trim());
           for (const line of errorLines) {
-            await addLine(line.trim(), 'error', 100);
+            await addLine(line.trim(), 'error', 50);
           }
         }
 
@@ -151,11 +114,11 @@ export const DeployConsole = forwardRef<DeployConsoleHandle>((_props, ref) => {
             .slice(0, 15); // Show first 15 error lines
 
           for (const line of errorLines) {
-            await addLine(line.trim(), 'error', 100);
+            await addLine(line.trim(), 'error', 50);
           }
         }
 
-        await addLine('✗ Configuration validation failed. Deploy aborted.', 'final-error', 400);
+        await addLine('✗ Configuration validation failed. Deploy aborted.', 'final-error', 150);
         customToast.error('Configuration validation failed');
         setIsRunning(false);
         return;
@@ -165,23 +128,23 @@ export const DeployConsole = forwardRef<DeployConsoleHandle>((_props, ref) => {
       const outputLines = validationResult.output.split('\n').filter(line => line.trim());
       for (const line of outputLines.slice(0, 5)) {
         if (line.includes('including') || line.includes('Reading') || line.includes('Module')) {
-          await addLine(`  ${line.trim()}`, 'info', 200);
+          await addLine(`  ${line.trim()}`, 'info', 80);
         }
       }
 
-      await addLine('Configuration appears to be OK', 'success', 400);
+      await addLine('Configuration appears to be OK', 'success', 150);
 
       // Step 3: Restart service
-      await addLine('$ systemctl restart freeradius', 'cmd', 500);
-      await addLine('Restarting FreeRADIUS service...', 'info', 300);
+      await addLine('$ systemctl restart freeradius', 'cmd', 200);
+      await addLine('Restarting FreeRADIUS service...', 'info', 150);
 
       const restartResult = await restartService();
 
       if (restartResult.success) {
-        await addLine('✓ Deploy complete. Service restarted successfully.', 'final-success', 500);
+        await addLine('✓ Deploy complete. Service restarted successfully.', 'final-success', 200);
         customToast.success('Configuration deployed successfully');
       } else {
-        await addLine('✗ Failed to restart service: ' + restartResult.message, 'final-error', 300);
+        await addLine('✗ Failed to restart service: ' + restartResult.message, 'final-error', 150);
         customToast.error('Failed to restart service');
       }
     } catch (error) {
@@ -208,14 +171,14 @@ export const DeployConsole = forwardRef<DeployConsoleHandle>((_props, ref) => {
       try {
         // Show command
         await addLine('$ freeradius -CX /etc/freeradius/3.0', 'cmd', 0);
-        await addLine('Validating configuration...', 'info', 400);
-        await addLine('ERROR: Configuration validation failed', 'error', 200);
+        await addLine('Validating configuration...', 'info', 150);
+        await addLine('ERROR: Configuration validation failed', 'error', 100);
 
         // Show the actual error message
         if (error) {
           const errorLines = error.split('\n').filter(line => line.trim());
           for (const line of errorLines) {
-            await addLine(line.trim(), 'error', 100);
+            await addLine(line.trim(), 'error', 50);
           }
         }
 
@@ -249,11 +212,11 @@ export const DeployConsole = forwardRef<DeployConsoleHandle>((_props, ref) => {
             .slice(0, 15);
 
           for (const line of errorLines) {
-            await addLine(line.trim(), 'error', 100);
+            await addLine(line.trim(), 'error', 50);
           }
         }
 
-        await addLine('✗ Configuration validation failed. Changes were not saved.', 'final-error', 400);
+        await addLine('✗ Configuration validation failed. Changes were not saved.', 'final-error', 150);
 
         // Auto-minimize after 15 seconds
         setTimeout(() => {
@@ -284,6 +247,21 @@ export const DeployConsole = forwardRef<DeployConsoleHandle>((_props, ref) => {
         return 'text-neon-red font-semibold';
       default:
         return 'text-foreground';
+    }
+  };
+
+  const getTextGlow = (type: LineType) => {
+    switch (type) {
+      case 'cmd':
+        return '0 0 10px rgba(122, 162, 247, 0.5)'; // Blue glow
+      case 'success':
+        return '0 0 8px rgba(158, 206, 106, 0.4)'; // Subtle green glow
+      case 'final-success':
+        return '0 0 15px rgba(158, 206, 106, 0.6)'; // Green glow
+      case 'final-error':
+        return '0 0 15px rgba(247, 118, 142, 0.6)'; // Red glow
+      default:
+        return 'none';
     }
   };
 
@@ -373,15 +351,16 @@ export const DeployConsole = forwardRef<DeployConsoleHandle>((_props, ref) => {
                   </div>
                 ) : (
                   lines.map((line, index) => (
-                    <div
+                    <motion.div
                       key={index}
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.3, ease: 'easeOut' }}
                       className={getOutputClass(line.type)}
+                      style={{ textShadow: getTextGlow(line.type) }}
                     >
                       {line.displayedText}
-                      {!line.isComplete && isRunning && (
-                        <span className="inline-block w-2 h-3 bg-primary ml-0.5 animate-blink" />
-                      )}
-                    </div>
+                    </motion.div>
                   ))
                 )}
               </div>

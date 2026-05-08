@@ -41,7 +41,6 @@ export const CoaConsole = forwardRef<CoaConsoleHandle, CoaConsoleProps>(
     const [planeDestination, setPlaneDestination] = useState({ x: 0, y: 0 });
     const [isMounted, setIsMounted] = useState(false);
     const consoleRef = useRef<HTMLDivElement>(null);
-    const animationRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
       setIsMounted(true);
@@ -53,54 +52,18 @@ export const CoaConsole = forwardRef<CoaConsoleHandle, CoaConsoleProps>(
       }
     }, [lines]);
 
-    useEffect(() => {
-      return () => {
-        if (animationRef.current) {
-          clearTimeout(animationRef.current);
-        }
-      };
-    }, []);
-
-    const animateText = async (text: string, type: LineType, lineIndex: number) => {
-      const chars = text.split('');
-      for (let i = 0; i <= chars.length; i++) {
-        await new Promise(resolve => {
-          animationRef.current = setTimeout(resolve, 12); // 12ms per character for smoother feel
-        });
-
-        setLines(prev => {
-          const newLines = [...prev];
-          if (newLines[lineIndex]) {
-            newLines[lineIndex] = {
-              ...newLines[lineIndex],
-              displayedText: chars.slice(0, i).join(''),
-              isComplete: i === chars.length,
-            };
-          }
-          return newLines;
-        });
-      }
-    };
-
     const addLine = async (text: string, type: LineType, delay = 0) => {
       if (delay > 0) {
         await new Promise(resolve => setTimeout(resolve, delay));
       }
 
-      let lineIndex = 0;
-      setLines(prev => {
-        lineIndex = prev.length;
-        return [...prev, {
-          fullText: text,
-          displayedText: '',
-          type,
-          isComplete: false,
-        }];
-      });
-
-      // Small delay to ensure state update
-      await new Promise(resolve => setTimeout(resolve, 50));
-      await animateText(text, type, lineIndex);
+      // Add line with full text immediately - no character animation
+      setLines(prev => [...prev, {
+        fullText: text,
+        displayedText: text,
+        type,
+        isComplete: true,
+      }]);
     };
 
     const handleClear = () => {
@@ -151,6 +114,21 @@ export const CoaConsole = forwardRef<CoaConsoleHandle, CoaConsoleProps>(
           return 'text-neon-red font-semibold';
         default:
           return 'text-foreground';
+      }
+    };
+
+    const getTextGlow = (type: LineType) => {
+      switch (type) {
+        case 'cmd':
+          return '0 0 10px rgba(122, 162, 247, 0.5)'; // Blue glow
+        case 'success':
+          return '0 0 8px rgba(158, 206, 106, 0.4)'; // Subtle green glow
+        case 'final-success':
+          return '0 0 15px rgba(158, 206, 106, 0.6)'; // Green glow
+        case 'final-error':
+          return '0 0 15px rgba(247, 118, 142, 0.6)'; // Red glow
+        default:
+          return 'none';
       }
     };
 
@@ -364,12 +342,11 @@ export const CoaConsole = forwardRef<CoaConsoleHandle, CoaConsoleProps>(
                     </div>
                   ) : (
                     lines.map((line, index) => {
-                      // Highlight "CoA-ACK" and "CoA-NACK" in the text
                       const text = line.displayedText;
                       const hasCoAACK = text.includes('CoA-ACK') || text.includes('Coa-Ack');
                       const hasCoANACK = text.includes('CoA-NACK') || text.includes('Coa-Nack') || text.includes('CoA-NAK') || text.includes('Coa-Nak');
 
-                      let displayContent;
+                      let displayContent: React.ReactNode;
                       if (hasCoANACK) {
                         // Highlight "CoA-NACK" in bold red (check NACK first since it's more specific)
                         const parts = text.split(/(CoA-NACK|Coa-Nack|CoA-NAK|Coa-Nak)/g);
@@ -393,15 +370,16 @@ export const CoaConsole = forwardRef<CoaConsoleHandle, CoaConsoleProps>(
                       }
 
                       return (
-                        <div
+                        <motion.div
                           key={index}
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ duration: 0.3, ease: 'easeOut' }}
                           className={getOutputClass(line.type)}
+                          style={{ textShadow: getTextGlow(line.type) }}
                         >
                           {displayContent}
-                          {!line.isComplete && isRunning && (
-                            <span className="inline-block w-2 h-3 bg-primary ml-0.5 animate-blink" />
-                          )}
-                        </div>
+                        </motion.div>
                       );
                     })
                   )}
