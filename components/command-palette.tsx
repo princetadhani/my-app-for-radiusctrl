@@ -8,6 +8,7 @@ import { type FileNode } from '@/lib/api';
 interface CommandPaletteProps {
   onFileSelect: (path: string) => void;
   fileTree: FileNode[];
+  onToggleCommandPalette?: (isOpen: boolean) => void; // Optional callback to notify parent of state changes
 }
 
 interface SearchResult {
@@ -19,6 +20,12 @@ interface SearchResult {
 
 function flattenFiles(nodes: FileNode[], results: SearchResult[] = []): SearchResult[] {
   nodes.forEach(node => {
+    // Exclude COA directory files from the main command palette
+    // COA files should only appear in the COA page command palette
+    if (node.path && node.path.includes('/coa')) {
+      return; // Skip COA directory entirely
+    }
+
     if (node.type === 'file') {
       results.push({
         type: 'file',
@@ -34,7 +41,7 @@ function flattenFiles(nodes: FileNode[], results: SearchResult[] = []): SearchRe
   return results;
 }
 
-export function CommandPalette({ onFileSelect, fileTree }: CommandPaletteProps) {
+export function CommandPalette({ onFileSelect, fileTree, onToggleCommandPalette }: CommandPaletteProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -46,6 +53,25 @@ export function CommandPalette({ onFileSelect, fileTree }: CommandPaletteProps) 
     setAllFiles(files);
     console.log('Command palette updated with', files.length, 'files');
   }, [fileTree]);
+
+  // Notify parent when isOpen changes
+  useEffect(() => {
+    if (onToggleCommandPalette) {
+      onToggleCommandPalette(isOpen);
+    }
+  }, [isOpen, onToggleCommandPalette]);
+
+  // Expose toggle function via custom event for Monaco Editor integration
+  useEffect(() => {
+    const handleToggleEvent = () => {
+      setIsOpen(prev => !prev);
+      setSearch('');
+      setSelectedIndex(0);
+    };
+
+    window.addEventListener('toggleCommandPalette', handleToggleEvent);
+    return () => window.removeEventListener('toggleCommandPalette', handleToggleEvent);
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

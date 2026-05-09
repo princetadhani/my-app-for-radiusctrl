@@ -81,8 +81,19 @@ export default function CoaPage() {
                 setIsCommandPaletteOpen(prev => !prev);
             }
         };
+
+        // Listen for custom event from Monaco Editor
+        const handleToggleEvent = () => {
+            setIsCommandPaletteOpen(prev => !prev);
+        };
+
         document.addEventListener('keydown', handleKeyDown);
-        return () => document.removeEventListener('keydown', handleKeyDown);
+        window.addEventListener('toggleCoaCommandPalette', handleToggleEvent);
+
+        return () => {
+            document.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('toggleCoaCommandPalette', handleToggleEvent);
+        };
     }, []);
 
     const handleFileSelect = useCallback(async (path: string) => {
@@ -132,11 +143,21 @@ export default function CoaPage() {
 
     const handleEditorDidMount: OnMount = useCallback((editor, monaco) => {
         editorRef.current = editor;
+
+        // Add keyboard shortcut for save (Ctrl/Cmd + S)
         editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, async () => {
             // Call save directly without checking state inside the callback
             // The state will be checked when the function executes
             await handleSaveFile();
         });
+
+        // Add keyboard shortcut for command palette (Ctrl/Cmd + K)
+        // This allows the command palette to work even when the editor is focused
+        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyK, () => {
+            // Dispatch custom event to toggle command palette
+            window.dispatchEvent(new CustomEvent('toggleCoaCommandPalette'));
+        });
+
         monaco.editor.defineTheme('radius-dark', {
             base: 'vs-dark',
             inherit: true,

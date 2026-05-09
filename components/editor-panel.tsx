@@ -230,6 +230,18 @@ export function EditorPanel({ filePath, deployConsoleRef, onDeleteDictionary }: 
       },
     });
 
+    // Add keyboard shortcut for command palette (Ctrl/Cmd + K)
+    // This allows the command palette to work even when the editor is focused
+    editor.addAction({
+      id: "toggle-command-palette",
+      label: "Toggle Command Palette",
+      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyK],
+      run: () => {
+        // Dispatch custom event to toggle command palette
+        window.dispatchEvent(new CustomEvent('toggleCommandPalette'));
+      },
+    });
+
     // Set tab size
     editor.getModel()?.updateOptions({ tabSize: 4 });
 
