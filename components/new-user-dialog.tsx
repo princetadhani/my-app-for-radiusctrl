@@ -17,9 +17,6 @@ export function NewUserDialog({ isOpen, onClose, onSuccess, onError, existingUse
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState('');
 
-  // Validation regex: alphanumeric only (no underscores or hyphens)
-  const userNameRegex = /^[a-zA-Z0-9]+$/;
-
   useEffect(() => {
     if (isOpen) {
       setFilename('');
@@ -34,32 +31,35 @@ export function NewUserDialog({ isOpen, onClose, onSuccess, onError, existingUse
       return;
     }
 
+    // Convert to lowercase
+    const lowerValue = filename.toLowerCase();
+
     // Check for spaces
-    if (/\s/.test(filename)) {
+    if (/\s/.test(lowerValue)) {
       setError('Filename cannot contain spaces');
       return;
     }
 
     // Check for dots (extensions)
-    if (filename.includes('.')) {
+    if (lowerValue.includes('.')) {
       setError('Filename cannot contain dots');
       return;
     }
 
-    // Check for non-alphanumeric characters
-    if (!userNameRegex.test(filename)) {
-      setError('Only letters and numbers are allowed');
+    // Check for valid characters: ONLY lowercase letters and numbers (no hyphens, no underscores)
+    if (!/^[a-z0-9]+$/.test(lowerValue)) {
+      setError('Only lowercase letters and numbers allowed');
       return;
     }
 
     // Check for duplicates (case-insensitive)
-    if (existingUsers.some(user => user.toLowerCase() === filename.toLowerCase())) {
+    if (existingUsers.some(user => user.toLowerCase() === lowerValue)) {
       setError('User already exists');
       return;
     }
 
     setError('');
-  }, [filename, userNameRegex, existingUsers]);
+  }, [filename, existingUsers]);
 
   const handleCreate = async () => {
     // Don't proceed if there's a validation error
@@ -209,7 +209,7 @@ export function NewUserDialog({ isOpen, onClose, onSuccess, onError, existingUse
                   <input
                     type="text"
                     value={filename}
-                    onChange={(e) => setFilename(e.target.value)}
+                    onChange={(e) => setFilename(e.target.value.toLowerCase())}
                     onKeyDown={handleKeyDown}
                     placeholder="e.g., prince, user1, testuser"
                     autoFocus
@@ -255,9 +255,9 @@ export function NewUserDialog({ isOpen, onClose, onSuccess, onError, existingUse
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.3 }}
                   >
-                    • Only letters and numbers allowed<br />
-                    • No spaces or special characters<br />
-                    • Will be converted to lowercase
+                    • Only lowercase letters and numbers allowed<br />
+                    • No spaces, dots, or special characters<br />
+                    • Will be saved as: <span style={{ color: '#7aa2f7' }}>{filename || 'username'}</span>
                   </motion.div>
                 </motion.div>
 

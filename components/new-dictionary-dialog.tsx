@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, AlertCircle } from 'lucide-react';
+import { X } from 'lucide-react';
 
 interface NewDictionaryDialogProps {
   isOpen: boolean;
@@ -39,7 +39,13 @@ export function NewDictionaryDialog({
 
     // Check for spaces
     if (/\s/.test(lowerValue)) {
-      setError('Name cannot contain spaces');
+      setError('Dictionary name cannot contain spaces');
+      return;
+    }
+
+    // Check for dots (extensions)
+    if (lowerValue.includes('.')) {
+      setError('Dictionary name cannot contain dots');
       return;
     }
 
@@ -58,7 +64,7 @@ export function NewDictionaryDialog({
     // Check for duplicates - IMPORTANT: Check if dictionary file already exists
     const fullName = `dictionary.${lowerValue}`;
     if (existingDictionaries.some(f => f.toLowerCase() === fullName.toLowerCase())) {
-      setError('Dictionary file already exists');
+      setError('Dictionary already exists');
       return;
     }
 
@@ -82,11 +88,17 @@ export function NewDictionaryDialog({
     }
   };
 
+  const handleClose = () => {
+    setValue('');
+    setError('');
+    onClose();
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       handleConfirm();
     } else if (e.key === 'Escape') {
-      onClose();
+      handleClose();
     }
   };
 
@@ -94,7 +106,7 @@ export function NewDictionaryDialog({
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
+          {/* Backdrop with blur */}
           <motion.div
             initial={{ opacity: 0, backdropFilter: 'blur(0px)' }}
             animate={{ opacity: 1, backdropFilter: 'blur(8px)' }}
@@ -103,115 +115,174 @@ export function NewDictionaryDialog({
             style={{
               backgroundColor: 'rgba(0, 0, 0, 0.75)',
             }}
-            onClick={onClose}
+            onClick={handleClose}
           >
-            {/* Dialog */}
+            {/* Dialog with gradient border */}
             <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              initial={{ opacity: 0, scale: 0.9, y: 30 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 30 }}
+              transition={{ type: 'spring', duration: 0.5 }}
+              className="relative w-full max-w-md"
               onClick={(e) => e.stopPropagation()}
-              className="relative rounded-xl overflow-hidden shadow-2xl"
-              style={{
-                width: '480px',
-                maxWidth: '90vw',
-                backgroundColor: '#0d1117',
-                border: '1px solid #30363d',
-              }}
             >
-              {/* Header */}
-              <div
-                className="px-6 py-4 border-b"
+              {/* Animated gradient border glow */}
+              <motion.div
+                className="absolute -inset-0.5 rounded-xl opacity-75 blur-sm"
                 style={{
-                  borderBottomColor: '#21262d',
-                  background: 'linear-gradient(135deg, rgba(122, 162, 247, 0.05), rgba(187, 154, 247, 0.05))',
+                  background: 'linear-gradient(45deg, #7aa2f7, #bb9af7, #7aa2f7, #bb9af7)',
+                  backgroundSize: '300% 300%',
+                }}
+                animate={{
+                  backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
+                }}
+                transition={{
+                  duration: 3,
+                  repeat: Infinity,
+                  ease: 'linear',
+                }}
+              />
+
+              {/* Dialog content */}
+              <div
+                className="relative p-6 rounded-xl shadow-2xl"
+                style={{
+                  backgroundColor: '#0d1117',
+                  border: '1px solid rgba(122, 162, 247, 0.3)',
                 }}
               >
-                <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-semibold" style={{ color: '#c9d1d9' }}>
-                    Create New Dictionary
-                  </h2>
-                  <button
-                    onClick={onClose}
-                    className="p-1 rounded hover:bg-white/10 transition-colors"
-                    style={{ color: '#8b949e' }}
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Body */}
-              <div className="px-6 py-5 space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2" style={{ color: '#c9d1d9' }}>
-                    Dictionary Name
-                  </label>
-                  <div className="relative">
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-mono" style={{ color: '#6e7681' }}>
-                      dictionary.
-                    </div>
-                    <input
-                      type="text"
-                      value={value}
-                      onChange={(e) => setValue(e.target.value.toLowerCase())}
-                      onKeyDown={handleKeyDown}
-                      placeholder="myvendor"
-                      className="w-full px-3 py-2 rounded-lg border transition-all font-mono text-sm"
-                      style={{
-                        paddingLeft: '90px',
-                        backgroundColor: '#161b22',
-                        borderColor: error ? '#f85149' : '#30363d',
-                        color: '#c9d1d9',
-                        outline: 'none',
-                      }}
-                      autoFocus
-                    />
-                  </div>
-
-                  {error && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="flex items-center gap-2 mt-2 text-sm"
-                      style={{ color: '#f85149' }}
-                    >
-                      <AlertCircle className="w-4 h-4" />
-                      <span>{error}</span>
-                    </motion.div>
-                  )}
-
-                  <div className="text-xs mt-2" style={{ color: '#6e7681' }}>
-                    • Only lowercase letters and numbers<br />
-                    • Name will be saved as: dictionary.{value || 'myvendor'}
-                  </div>
-                </div>
-              </div>
-
-              {/* Footer */}
-              <div className="px-6 py-4 border-t flex items-center justify-end gap-3" style={{ borderTopColor: '#21262d', backgroundColor: '#010409' }}>
+                {/* Close Button */}
                 <button
-                  onClick={onClose}
-                  className="px-4 py-2 text-sm rounded-lg transition-all hover:bg-white/5"
+                  onClick={handleClose}
+                  className="absolute top-4 right-4 p-1.5 rounded-lg transition-all hover:bg-white/10"
                   style={{ color: '#8b949e' }}
                 >
-                  Cancel
+                  <X className="w-4 h-4" />
                 </button>
-                <button
-                  onClick={handleConfirm}
-                  disabled={!value.trim() || !!error}
-                  className="px-5 py-2 text-sm rounded-lg font-medium transition-all"
+
+                {/* Title with gradient */}
+                <motion.h2
+                  className="text-xl font-bold mb-2"
                   style={{
-                    background: value.trim() && !error
-                      ? 'linear-gradient(135deg, #7aa2f7, #bb9af7)'
-                      : 'rgba(122, 162, 247, 0.3)',
-                    color: value.trim() && !error ? '#0d1117' : '#8b949e',
-                    cursor: value.trim() && !error ? 'pointer' : 'not-allowed',
+                    background: 'linear-gradient(135deg, #7aa2f7, #bb9af7)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
                   }}
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 }}
                 >
-                  Create Dictionary
-                </button>
+                  Create New Dictionary
+                </motion.h2>
+
+                {/* Description */}
+                <motion.p
+                  className="text-sm mb-5"
+                  style={{ color: '#8b949e' }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.15 }}
+                >
+                  Enter a name for the new FreeRADIUS dictionary file.
+                </motion.p>
+
+                {/* Input with glow on focus */}
+                <motion.div
+                  className="mb-3"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                >
+                  <input
+                    type="text"
+                    value={value}
+                    onChange={(e) => setValue(e.target.value.toLowerCase())}
+                    onKeyDown={handleKeyDown}
+                    placeholder="e.g., myvendor, custom, company"
+                    autoFocus
+                    className="w-full px-4 py-2.5 rounded-lg text-sm transition-all focus:outline-none"
+                    style={{
+                      backgroundColor: 'rgba(22, 27, 34, 0.8)',
+                      border: error && value.trim() ? '1px solid rgba(237, 135, 150, 0.5)' : '1px solid rgba(122, 162, 247, 0.3)',
+                      color: '#c9d1d9',
+                      fontFamily: 'JetBrains Mono, monospace',
+                    }}
+                    onFocus={(e) => {
+                      if (!error || !value.trim()) {
+                        e.target.style.borderColor = 'rgba(122, 162, 247, 0.6)';
+                        e.target.style.boxShadow = '0 0 15px rgba(122, 162, 247, 0.3)';
+                      }
+                    }}
+                    onBlur={(e) => {
+                      if (!error || !value.trim()) {
+                        e.target.style.borderColor = 'rgba(122, 162, 247, 0.3)';
+                        e.target.style.boxShadow = 'none';
+                      }
+                    }}
+                  />
+
+                  {/* Error message */}
+                  {error && value.trim() && (
+                    <motion.p
+                      className="text-xs mt-2"
+                      style={{ color: '#ed8796' }}
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                    >
+                      {error}
+                    </motion.p>
+                  )}
+
+                  {/* Helper text */}
+                  <motion.div
+                    className="text-xs mt-2"
+                    style={{ color: '#6e7681' }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.3 }}
+                  >
+                    • Only lowercase letters and numbers allowed<br />
+                    • No spaces, dots, or special characters<br />
+                    • Will be saved as: <span style={{ color: '#7aa2f7' }}>dictionary.{value || 'myvendor'}</span>
+                  </motion.div>
+                </motion.div>
+
+                {/* Actions */}
+                <motion.div
+                  className="flex items-center justify-end gap-3"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.25 }}
+                >
+                  <button
+                    onClick={handleClose}
+                    className="px-4 py-2 text-sm rounded-lg transition-all hover:bg-white/5"
+                    style={{ color: '#8b949e' }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleConfirm}
+                    disabled={!value.trim() || !!error}
+                    className="px-5 py-2 text-sm rounded-lg font-medium transition-all relative overflow-hidden group"
+                    style={{
+                      background: value.trim() && !error
+                        ? 'linear-gradient(135deg, #7aa2f7, #bb9af7)'
+                        : 'rgba(122, 162, 247, 0.3)',
+                      color: value.trim() && !error ? '#0d1117' : '#8b949e',
+                      cursor: value.trim() && !error ? 'pointer' : 'not-allowed',
+                    }}
+                  >
+                    {/* Shimmer effect */}
+                    {value.trim() && !error && (
+                      <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+                    )}
+                    <span className="relative z-10">
+                      Create Dictionary
+                    </span>
+                  </button>
+                </motion.div>
               </div>
             </motion.div>
           </motion.div>
