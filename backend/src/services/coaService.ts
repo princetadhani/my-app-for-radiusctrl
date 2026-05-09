@@ -53,7 +53,6 @@ export async function createCoaFile(
 
 # User-Name = "prince"
 # NAS-IP-Address = 10.86.88.193
-# Session-Timeout = 10
 # Tunnel-Type = 13
 # Tunnel-Medium-Type = IEEE-802
 # Tunnel-Private-Group-Id = "3005"

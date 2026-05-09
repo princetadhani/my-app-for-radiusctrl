@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Copy, RotateCcw, Save, Check, Eye } from 'lucide-react';
+import { Copy, RotateCcw, Save, Check, Eye, Trash2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 interface EditorTopBarProps {
@@ -12,6 +12,7 @@ interface EditorTopBarProps {
   onCopy?: () => void;
   onReset?: () => void;
   onSave?: () => void;
+  onDelete?: () => void;
   isSaving?: boolean;
 }
 
@@ -23,6 +24,7 @@ export function EditorTopBar({
   onCopy,
   onReset,
   onSave,
+  onDelete,
   isSaving = false,
 }: EditorTopBarProps) {
   const [copied, setCopied] = useState(false);
@@ -184,6 +186,24 @@ export function EditorTopBar({
             title="Reset changes"
           >
             <RotateCcw className="w-3.5 h-3.5" />
+          </button>
+        )}
+
+        {/* Delete Button - Only for dictionary files */}
+        {onDelete && isMounted && (
+          <button
+            onClick={onDelete}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all relative overflow-hidden group"
+            style={{
+              background: 'rgba(237, 135, 150, 0.15)',
+              border: '1px solid rgba(237, 135, 150, 0.3)',
+              color: '#ed8796',
+            }}
+            title="Delete dictionary file"
+          >
+            <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+            <Trash2 className="w-3.5 h-3.5 relative z-10" />
+            <span className="relative z-10">Delete</span>
           </button>
         )}
 

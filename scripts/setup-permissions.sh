@@ -112,6 +112,21 @@ if [ "$(sudo ls -A /etc/freeradius/3.0/coa 2>/dev/null)" ]; then
     echo "  ✓ Fixed $FILE_COUNT existing COA file(s)"
 fi
 
+# Dictionary directory - owned by freerad:freerad (not root!)
+sudo mkdir -p /etc/freeradius/3.0/dictionary.d
+sudo chown $RADIUS_GROUP:$RADIUS_GROUP /etc/freeradius/3.0/dictionary.d
+sudo chmod 770 /etc/freeradius/3.0/dictionary.d
+echo "  ✓ dictionary.d directory: $RADIUS_GROUP:$RADIUS_GROUP (770)"
+
+# Fix ownership of existing custom dictionary files
+if [ "$(sudo ls -A /etc/freeradius/3.0/dictionary.d 2>/dev/null)" ]; then
+    echo "  ℹ  Found existing dictionary files - fixing ownership..."
+    sudo chown $RADIUS_GROUP:$RADIUS_GROUP /etc/freeradius/3.0/dictionary.d/* 2>/dev/null || true
+    sudo chmod 664 /etc/freeradius/3.0/dictionary.d/* 2>/dev/null || true
+    DICT_FILE_COUNT=$(sudo ls /etc/freeradius/3.0/dictionary.d | wc -l)
+    echo "  ✓ Fixed $DICT_FILE_COUNT existing dictionary file(s)"
+fi
+
 # --- NEW: users.d Directory & Symlink Setup ---
 USERS_DIR="/etc/freeradius/3.0/mods-config/files/users.d"
 USERS_LINK="/etc/freeradius/3.0/users.d"
@@ -217,6 +232,11 @@ if [ -d /etc/freeradius/3.0/coa ]; then
     ls -ld /etc/freeradius/3.0/coa | awk '{print "  " $3 ":" $4 " " $1 " coa/"}'
 fi
 
+if [ -d /etc/freeradius/3.0/dictionary.d ]; then
+    echo "dictionary.d directory permissions:"
+    ls -ld /etc/freeradius/3.0/dictionary.d | awk '{print "  " $3 ":" $4 " " $1 " dictionary.d/"}'
+fi
+
 if [ -L /etc/freeradius/3.0/users.d ]; then
     echo "users.d symlink:"
     ls -l /etc/freeradius/3.0/users.d | awk '{print "  " $9 " " $10 " " $11}'
@@ -234,8 +254,9 @@ echo ""
 echo "✅ Group permissions set (GROUP = USER)"
 echo "✅ Certificate access enabled (RadSec ready)"
 echo "✅ COA directory owned by $RADIUS_GROUP:$RADIUS_GROUP"
+echo "✅ dictionary.d directory owned by $RADIUS_GROUP:$RADIUS_GROUP"
 echo "✅ users.d symlink created and owned by $RADIUS_GROUP:$RADIUS_GROUP (770)"
-if [ "$(sudo ls -A /etc/freeradius/3.0/coa 2>/dev/null)" ] || [ "$(sudo ls -A /etc/freeradius/3.0/mods-config/files/users.d 2>/dev/null)" ]; then
+if [ "$(sudo ls -A /etc/freeradius/3.0/coa 2>/dev/null)" ] || [ "$(sudo ls -A /etc/freeradius/3.0/mods-config/files/users.d 2>/dev/null)" ] || [ "$(sudo ls -A /etc/freeradius/3.0/dictionary.d 2>/dev/null)" ]; then
     echo "✅ Existing files in helper directories fixed"
 fi
 echo "✅ Sudo configured"

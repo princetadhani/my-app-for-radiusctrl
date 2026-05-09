@@ -13,15 +13,17 @@ import type { DeployConsoleHandle } from '@/components/deploy-console';
 interface EditorPanelProps {
   filePath: string;
   deployConsoleRef?: React.RefObject<DeployConsoleHandle>;
+  onDeleteDictionary?: (fileName: string) => void;
 }
 
-export function EditorPanel({ filePath, deployConsoleRef }: EditorPanelProps) {
+export function EditorPanel({ filePath, deployConsoleRef, onDeleteDictionary }: EditorPanelProps) {
   const [content, setContent] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isModified, setIsModified] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [mtime, setMtime] = useState<number | null>(null);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isReadOnly, setIsReadOnly] = useState(false);
   const editorRef = useRef<any>(null);
 
@@ -309,6 +311,22 @@ export function EditorPanel({ filePath, deployConsoleRef }: EditorPanelProps) {
     setIsResetDialogOpen(false);
   };
 
+  const handleDeleteClick = () => {
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (!filePath) return;
+    const fileName = filePath.split('/').pop();
+    if (fileName && onDeleteDictionary) {
+      onDeleteDictionary(fileName);
+      setIsDeleteDialogOpen(false);
+    }
+  };
+
+  // Check if this is a dictionary file
+  const isDictionaryFile = filePath.includes('/dictionary.d/') && filePath.split('/').pop()?.startsWith('dictionary.');
+
   return (
     <div className="h-full w-full flex flex-col bg-card">
       {/* Editor Top Bar */}
@@ -320,6 +338,7 @@ export function EditorPanel({ filePath, deployConsoleRef }: EditorPanelProps) {
         onCopy={handleCopyPath}
         onReset={handleResetClick}
         onSave={handleSaveFile}
+        onDelete={isDictionaryFile ? handleDeleteClick : undefined}
         isSaving={isSaving}
       />
 
@@ -394,6 +413,18 @@ export function EditorPanel({ filePath, deployConsoleRef }: EditorPanelProps) {
         confirmText="Reset"
         cancelText="Cancel"
         variant="warning"
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Dictionary File"
+        description={`Are you sure you want to delete "${filePath.split('/').pop()}"? This will also remove it from the main dictionary file. This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
       />
     </div>
   );

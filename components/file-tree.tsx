@@ -1,7 +1,7 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, Folder, FileText, Shield, Users, KeyRound, PanelLeftClose, PanelLeft, UsersRound } from 'lucide-react';
+import { ChevronRight, Folder, FileText, Shield, Users, KeyRound, PanelLeftClose, PanelLeft, UsersRound, Plus, BookOpen } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import type { FileNode } from '@/lib/api';
@@ -13,21 +13,25 @@ interface FileTreeProps {
   level?: number;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
+  onNewDictionary?: () => void;
 }
 
 function TreeNode({
   node,
   activeFile,
   onFileSelect,
-  level = 0
+  level = 0,
+  onNewDictionary
 }: {
   node: FileNode;
   activeFile?: string;
   onFileSelect: (path: string) => void;
   level?: number;
+  onNewDictionary?: () => void;
 }) {
   // Start with all directories collapsed for cleaner initial view
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
   const getIcon = () => {
     if (node.type === 'directory') {
@@ -35,6 +39,18 @@ function TreeNode({
       if (node.name === 'users.d') {
         return (
           <UsersRound
+            className="w-3.5 h-3.5"
+            style={{
+              color: isExpanded ? '#7aa2f7' : '#7aa2f799' // Same blue as folders
+            }}
+          />
+        );
+      }
+
+      // Special icon for dictionary.d directory - BookOpen
+      if (node.name === 'dictionary.d') {
+        return (
+          <BookOpen
             className="w-3.5 h-3.5"
             style={{
               color: isExpanded ? '#7aa2f7' : '#7aa2f799' // Same blue as folders
@@ -84,6 +100,7 @@ function TreeNode({
   const isActive = node.type === 'file' && node.path === activeFile;
   const isDirectory = node.type === 'directory';
   const isUsersDirectory = node.name === 'users.d';
+  const isDictionaryDirectory = node.name === 'dictionary.d';
 
   // Calculate padding based on depth
   const paddingLeft = isDirectory ? (level * 12) + 8 : (level * 12) + 20;
@@ -91,12 +108,12 @@ function TreeNode({
   return (
     <div>
       <motion.div
-        className="flex items-center w-full rounded-sm cursor-pointer select-none transition-all duration-200"
+        className="flex items-center w-full rounded-sm cursor-pointer select-none transition-all duration-200 relative group"
         style={{
           paddingLeft: `${paddingLeft}px`,
           paddingTop: '4px',
           paddingBottom: '4px',
-          paddingRight: '8px',
+          paddingRight: isDictionaryDirectory ? '32px' : '8px', // Extra padding for + button
           gap: '6px',
           backgroundColor: isActive
             ? '#7aa2f720' // Blue background for active
@@ -119,6 +136,7 @@ function TreeNode({
           }
         }}
         onMouseEnter={(e) => {
+          setIsHovered(true);
           if (!isActive) {
             e.currentTarget.style.backgroundColor = isDirectory
               ? '#161b2280' // Darker hover for directories
@@ -127,6 +145,7 @@ function TreeNode({
           }
         }}
         onMouseLeave={(e) => {
+          setIsHovered(false);
           if (!isActive) {
             e.currentTarget.style.backgroundColor = 'transparent';
             e.currentTarget.style.color = isDirectory
@@ -145,6 +164,29 @@ function TreeNode({
         )}
         {getIcon()}
         <span className="truncate">{node.name}</span>
+
+        {/* + Button for dictionary.d directory */}
+        {isDictionaryDirectory && onNewDictionary && (
+          <motion.button
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{
+              opacity: isHovered ? 1 : 0,
+              scale: isHovered ? 1 : 0.8
+            }}
+            transition={{ duration: 0.15 }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onNewDictionary();
+            }}
+            className="absolute right-2 p-1 rounded hover:bg-white/10 transition-colors"
+            style={{
+              color: '#7aa2f7',
+            }}
+            title="Create new dictionary file"
+          >
+            <Plus className="w-3.5 h-3.5" />
+          </motion.button>
+        )}
       </motion.div>
 
       <AnimatePresence>
@@ -162,6 +204,7 @@ function TreeNode({
                 node={child}
                 activeFile={activeFile}
                 onFileSelect={onFileSelect}
+                onNewDictionary={onNewDictionary}
                 level={level + 1}
               />
             ))}
@@ -178,7 +221,8 @@ export function FileTree({
   onFileSelect,
   level = 0,
   isCollapsed = false,
-  onToggleCollapse
+  onToggleCollapse,
+  onNewDictionary
 }: FileTreeProps) {
   return (
     <motion.div
@@ -216,6 +260,7 @@ export function FileTree({
                 node={node}
                 activeFile={activeFile}
                 onFileSelect={onFileSelect}
+                onNewDictionary={onNewDictionary}
                 level={level}
               />
             ))}

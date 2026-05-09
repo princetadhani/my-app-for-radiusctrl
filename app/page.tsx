@@ -8,7 +8,8 @@ import { EditorPanel } from '@/components/editor-panel';
 import { DeployConsole, type DeployConsoleHandle } from '@/components/deploy-console';
 import { CommandPalette } from '@/components/command-palette';
 import { NewUserDialog } from '@/components/new-user-dialog';
-import { getFileTree, getSocket, type FileNode } from '@/lib/api';
+import { NewDictionaryDialog } from '@/components/new-dictionary-dialog';
+import { getFileTree, getSocket, createDictionaryFile, listDictionaryFiles, type FileNode } from '@/lib/api';
 import { toast } from 'sonner';
 import { customToast } from '@/lib/custom-toast';
 import { TriangleAlert, FilePlus, Trash2, X } from 'lucide-react';
@@ -18,6 +19,8 @@ function HomeContent() {
   const [fileTree, setFileTree] = useState<FileNode[]>([]);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isNewUserDialogOpen, setIsNewUserDialogOpen] = useState(false);
+  const [isNewDictionaryDialogOpen, setIsNewDictionaryDialogOpen] = useState(false);
+  const [existingDictionaries, setExistingDictionaries] = useState<string[]>([]);
   const deployConsoleRef = useRef<DeployConsoleHandle>(null);
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -38,6 +41,20 @@ function HomeContent() {
     };
 
     loadFileTree();
+  }, []);
+
+  // Load existing dictionaries
+  useEffect(() => {
+    const loadDictionaries = async () => {
+      try {
+        const dicts = await listDictionaryFiles();
+        setExistingDictionaries(dicts);
+      } catch (error) {
+        console.error('Error loading dictionaries:', error);
+      }
+    };
+
+    loadDictionaries();
   }, []);
 
   // Setup WebSocket listeners for file watcher events
@@ -259,10 +276,56 @@ function HomeContent() {
     }
   };
 
+  const handleNewDictionary = async (name: string) => {
+    try {
+      const fullName = `dictionary.${name}`;
+      await createDictionaryFile(fullName);
+
+      customToast.success(`Dictionary "${fullName}" created successfully`);
+
+      // Reload file tree and dictionary list
+      const updatedTree = await getFileTree();
+      setFileTree(updatedTree);
+
+      const dicts = await listDictionaryFiles();
+      setExistingDictionaries(dicts);
+
+      // Automatically open the newly created dictionary file in editor
+      const dictionaryFilePath = `/etc/freeradius/3.0/dictionary.d/${fullName}`;
+      setActiveFile(dictionaryFilePath);
+      console.log('Opened newly created dictionary file:', dictionaryFilePath);
+    } catch (error: any) {
+      console.error('Failed to create dictionary:', error);
+      customToast.error(error.message || 'Failed to create dictionary');
+    }
+  };
+
   const handleNewUserError = (message: string, validationOutput?: string) => {
     customToast.error(message);
     if (validationOutput && deployConsoleRef.current) {
       deployConsoleRef.current.showValidationError(validationOutput, message);
+    }
+  };
+
+  const handleDeleteDictionary = async (fileName: string) => {
+    try {
+      const { deleteDictionaryFile } = await import('@/lib/api');
+      await deleteDictionaryFile(fileName);
+
+      customToast.success(`Dictionary "${fileName}" deleted successfully`);
+
+      // Reload file tree and dictionary list
+      const updatedTree = await getFileTree();
+      setFileTree(updatedTree);
+
+      const dicts = await listDictionaryFiles();
+      setExistingDictionaries(dicts);
+
+      // Close the file if it was open
+      setActiveFile('');
+    } catch (error: any) {
+      console.error('Failed to delete dictionary:', error);
+      customToast.error(error.message || 'Failed to delete dictionary');
     }
   };
 
@@ -283,6 +346,7 @@ function HomeContent() {
           onFileSelect={setActiveFile}
           isCollapsed={isSidebarCollapsed}
           onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+          onNewDictionary={() => setIsNewDictionaryDialogOpen(true)}
         />
 
         {/* Editor Area */}
@@ -292,6 +356,7 @@ function HomeContent() {
             <EditorPanel
               filePath={activeFile}
               deployConsoleRef={deployConsoleRef}
+              onDeleteDictionary={handleDeleteDictionary}
             />
           </div>
 
@@ -324,6 +389,14 @@ function HomeContent() {
           }
           return [];
         })}
+      />
+
+      {/* New Dictionary Dialog */}
+      <NewDictionaryDialog
+        isOpen={isNewDictionaryDialogOpen}
+        onClose={() => setIsNewDictionaryDialogOpen(false)}
+        onConfirm={handleNewDictionary}
+        existingDictionaries={existingDictionaries}
       />
     </div>
   );

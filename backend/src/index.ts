@@ -7,6 +7,7 @@ import logger from './utils/logger';
 import fileRoutes from './routes/fileRoutes';
 import logsRoutes from './routes/logsRoutes';
 import coaRoutes from './routes/coaRoutes';
+import dictionaryRoutes from './routes/dictionaryRoutes';
 import serviceRoutes from './routes/serviceRoutes';
 import { initializeFileWatcher } from './services/fileWatcher';
 import { initializeLogStreamer } from './services/logStreamer';
@@ -44,6 +45,7 @@ app.use((req, res, next) => {
 app.use('/api/files', fileRoutes);
 app.use('/api/logs', logsRoutes);
 app.use('/api/coa', coaRoutes);
+app.use('/api/dictionary', dictionaryRoutes);
 app.use('/api/service', serviceRoutes);
 
 // Health check

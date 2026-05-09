@@ -262,3 +262,43 @@ export async function deleteCoaFile(fileName: string): Promise<void> {
     method: 'DELETE',
   });
 }
+
+// Dictionary Management
+export async function listDictionaryFiles(): Promise<string[]> {
+  const res = await fetch(`${API_BASE_URL}/api/dictionary/files`);
+  const data = await res.json();
+  return data.files;
+}
+
+export async function getDictionaryFileContent(fileName: string): Promise<string> {
+  const res = await fetch(`${API_BASE_URL}/api/dictionary/${fileName}`);
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || 'Failed to get dictionary file');
+  }
+  const data = await res.json();
+  return data.content;
+}
+
+export async function createDictionaryFile(fileName: string): Promise<{ success: boolean; filePath: string }> {
+  const res = await fetch(`${API_BASE_URL}/api/dictionary/create`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fileName }),
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || 'Failed to create dictionary file');
+  }
+  return await res.json();
+}
+
+export async function deleteDictionaryFile(fileName: string): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/api/dictionary/${fileName}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || 'Failed to delete dictionary file');
+  }
+}
