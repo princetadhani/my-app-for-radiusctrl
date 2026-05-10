@@ -339,6 +339,19 @@ export default function LogsPage() {
           }}
           transition={{ duration: 0.3, ease: 'easeOut' }}
           className="h-full glass-panel border-r border-border overflow-hidden"
+          style={{
+            cursor: isSidebarCollapsed ? 'pointer' : 'default',
+          }}
+          onClick={(e) => {
+            // When collapsed, clicking empty space expands the sidebar
+            if (isSidebarCollapsed) {
+              // Only trigger if clicking directly on the collapsed area, not on the button
+              const target = e.target as HTMLElement;
+              if (!target.closest('button')) {
+                setIsSidebarCollapsed(false);
+              }
+            }
+          }}
         >
           {/* Toggle Button */}
           <div className="h-12 border-b border-border flex items-center justify-between px-2">
@@ -350,7 +363,10 @@ export default function LogsPage() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsSidebarCollapsed(!isSidebarCollapsed);
+              }}
               className="h-8 w-8 hover:bg-secondary"
               title={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >

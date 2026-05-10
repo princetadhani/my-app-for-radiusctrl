@@ -267,19 +267,19 @@ export const DeployConsole = forwardRef<DeployConsoleHandle>((_props, ref) => {
 
   return (
     <div className="border-t border-border">
-      {/* Console Header/Toggle Bar */}
-      <div className="flex items-center justify-between px-3 py-1.5 bg-card/50 border-b border-border">
+      {/* Console Header/Toggle Bar - Fully Clickable */}
+      <div
+        className="flex items-center justify-between px-3 py-1.5 bg-card/50 border-b border-border cursor-pointer hover:bg-card/70 transition-colors"
+        onClick={() => setIsOpen(!isOpen)}
+      >
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
-          >
+          <div className="p-1 rounded text-muted-foreground">
             {isOpen ? (
               <ChevronDown className="h-4 w-4" />
             ) : (
               <ChevronUp className="h-4 w-4" />
             )}
-          </button>
+          </div>
           <span className="text-xs font-mono font-semibold text-foreground">
             {mode === 'validation' ? 'CONFIG TEST CONSOLE' : 'DEPLOY CONSOLE'}
           </span>
@@ -287,7 +287,7 @@ export const DeployConsole = forwardRef<DeployConsoleHandle>((_props, ref) => {
             }`} />
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
           {/* Clear Button */}
           {isMounted && (
             <button

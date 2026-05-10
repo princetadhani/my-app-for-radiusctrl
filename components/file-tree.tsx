@@ -238,6 +238,17 @@ export function FileTree({
         backgroundColor: 'rgba(18, 23, 35, 0.6)',
         backdropFilter: 'blur(16px) saturate(1.2)',
         borderRightColor: 'hsl(225, 15%, 18%)',
+        cursor: isCollapsed ? 'pointer' : 'default',
+      }}
+      onClick={(e) => {
+        // When collapsed, clicking empty space expands the sidebar
+        if (isCollapsed && onToggleCollapse) {
+          // Only trigger if clicking directly on the collapsed area, not on the button
+          const target = e.target as HTMLElement;
+          if (!target.closest('button')) {
+            onToggleCollapse();
+          }
+        }
       }}
     >
       {/* File Tree Content */}
@@ -269,11 +280,16 @@ export function FileTree({
       </AnimatePresence>
 
       {/* Floating Toggle Button */}
-      <div className="absolute top-2 right-2">
+      <div className="absolute top-2 right-2" style={{ pointerEvents: 'auto' }}>
         <Button
           variant="ghost"
           size="icon"
-          onClick={onToggleCollapse}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (onToggleCollapse) {
+              onToggleCollapse();
+            }
+          }}
           className="h-8 w-8 hover:bg-secondary/80 backdrop-blur-sm"
           style={{
             backgroundColor: 'rgba(18, 23, 35, 0.8)',

@@ -156,20 +156,20 @@ export const CoaConsole = forwardRef<CoaConsoleHandle, CoaConsoleProps>(
           )}
         </AnimatePresence>
 
-        {/* Console Header/Toggle Bar */}
-        <div className="flex items-center justify-between px-4 py-2 bg-card/50 border-b border-border">
+        {/* Console Header/Toggle Bar - Fully Clickable */}
+        <div
+          className="flex items-center justify-between px-4 py-2 bg-card/50 border-b border-border cursor-pointer hover:bg-card/70 transition-colors"
+          onClick={() => setIsOpen(!isOpen)}
+        >
           {/* Left Section */}
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => setIsOpen(!isOpen)}
-              className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
-            >
+            <div className="p-1 rounded text-muted-foreground">
               {isOpen ? (
                 <ChevronDown className="h-4 w-4" />
               ) : (
                 <ChevronUp className="h-4 w-4" />
               )}
-            </button>
+            </div>
             <span className="text-xs font-mono font-semibold text-foreground">
               COA CONSOLE
             </span>
@@ -186,7 +186,7 @@ export const CoaConsole = forwardRef<CoaConsoleHandle, CoaConsoleProps>(
           </div>
 
           {/* Right Section */}
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5" onClick={(e) => e.stopPropagation()}>
             {/* Request Type Toggle - Glassmorphic Radio Button */}
             <div
               className="flex items-center relative rounded-lg overflow-hidden"
