@@ -131,21 +131,41 @@ else
 fi
 
 ##############################################################################
-# Step 4: Check FreeRADIUS Directory
+# Step 4: Check and Install FreeRADIUS if needed
 ##############################################################################
 echo ""
 echo -e "${BLUE}[4/6] Checking FreeRADIUS installation...${NC}"
 
-if [ ! -d "/etc/freeradius/3.0" ]; then
-    echo -e "${YELLOW}⚠ WARNING: /etc/freeradius/3.0 not found${NC}"
-    echo "FreeRADIUS must be installed on the host system."
-    echo ""
-    read -p "Continue anyway? (y/N): " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "Installation cancelled."
+# Check if FreeRADIUS is installed
+FREERADIUS_INSTALLED=false
+if command -v freeradius >/dev/null 2>&1 || [ -d "/etc/freeradius/3.0" ]; then
+    FREERADIUS_INSTALLED=true
+fi
+
+if [ "$FREERADIUS_INSTALLED" = false ]; then
+    echo -e "${YELLOW}⚠ FreeRADIUS not found. Installing FreeRADIUS and freeradius-utils...${NC}"
+
+    # Detect package manager and install
+    if command -v apt-get >/dev/null 2>&1; then
+        apt-get update -qq
+        apt-get install -y freeradius freeradius-utils
+    elif command -v yum >/dev/null 2>&1; then
+        yum install -y freeradius freeradius-utils
+    elif command -v dnf >/dev/null 2>&1; then
+        dnf install -y freeradius freeradius-utils
+    elif command -v zypper >/dev/null 2>&1; then
+        zypper install -y freeradius-server freeradius-server-utils
+    else
+        echo -e "${RED}ERROR: Could not detect package manager!${NC}"
+        echo "Please install FreeRADIUS manually and re-run this script."
         exit 1
     fi
+
+    echo -e "${GREEN}✓ FreeRADIUS installed successfully${NC}"
+elif [ ! -d "/etc/freeradius/3.0" ]; then
+    echo -e "${RED}ERROR: FreeRADIUS installed but /etc/freeradius/3.0 not found${NC}"
+    echo "This may be a version mismatch. FreeRADIUS 3.0 is required."
+    exit 1
 else
     echo -e "${GREEN}✓ FreeRADIUS directory found${NC}"
 fi

@@ -35,22 +35,53 @@ fi
 echo "👤 Current user: $USER_NAME"
 echo ""
 
-# Check FreeRADIUS installation
+# Check FreeRADIUS installation and install if missing
 echo "Checking FreeRADIUS installation..."
 
+# Check if FreeRADIUS is installed
+FREERADIUS_INSTALLED=false
+if command -v freeradius >/dev/null 2>&1 || [ -d /etc/freeradius/3.0 ]; then
+    FREERADIUS_INSTALLED=true
+fi
+
+if [ "$FREERADIUS_INSTALLED" = false ]; then
+    echo "⚠️  FreeRADIUS not found. Installing FreeRADIUS and freeradius-utils..."
+
+    # Detect package manager and install
+    if command -v apt-get >/dev/null 2>&1; then
+        sudo apt-get update -qq
+        sudo apt-get install -y freeradius freeradius-utils
+    elif command -v yum >/dev/null 2>&1; then
+        sudo yum install -y freeradius freeradius-utils
+    elif command -v dnf >/dev/null 2>&1; then
+        sudo dnf install -y freeradius freeradius-utils
+    elif command -v zypper >/dev/null 2>&1; then
+        sudo zypper install -y freeradius-server freeradius-server-utils
+    else
+        echo "❌ ERROR: Could not detect package manager!"
+        echo "   Please install FreeRADIUS manually:"
+        echo "   - Debian/Ubuntu: sudo apt-get install freeradius freeradius-utils"
+        echo "   - RHEL/CentOS:   sudo yum install freeradius freeradius-utils"
+        exit 1
+    fi
+
+    echo "✅ FreeRADIUS installed successfully"
+fi
+
+# Determine FreeRADIUS group
 if getent group freerad >/dev/null 2>&1; then
     RADIUS_GROUP="freerad"
 elif getent group freeradius >/dev/null 2>&1; then
     RADIUS_GROUP="freeradius"
 else
-    echo "❌ ERROR: FreeRADIUS group not found!"
-    echo "   Please install FreeRADIUS first."
+    echo "❌ ERROR: FreeRADIUS group not found even after installation!"
+    echo "   This is unusual. Please check your FreeRADIUS installation."
     exit 1
 fi
 
 if [ ! -d /etc/freeradius/3.0 ]; then
     echo "❌ ERROR: Directory /etc/freeradius/3.0 not found!"
-    echo "   Please install FreeRADIUS 3.0 first."
+    echo "   FreeRADIUS may not be installed correctly."
     exit 1
 fi
 
@@ -58,21 +89,8 @@ echo "✅ Found FreeRADIUS group: $RADIUS_GROUP"
 echo "✅ Found directory: /etc/freeradius/3.0"
 echo ""
 
-# Auto-proceed when called from one-click installer
-if [ -z "$AUTO_YES" ]; then
-    # Confirm
-    echo "Ready to proceed with user '$USER_NAME' in group '$RADIUS_GROUP'?"
-    echo ""
-
-    read -p "Continue? (y/N) " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "Cancelled."
-        exit 0
-    fi
-else
-    echo "Auto-proceeding with user '$USER_NAME' in group '$RADIUS_GROUP'..."
-fi
+# Auto-proceed (no more prompts)
+echo "Proceeding with user '$USER_NAME' in group '$RADIUS_GROUP'..."
 
 echo ""
 
