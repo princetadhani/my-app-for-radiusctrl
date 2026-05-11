@@ -89,12 +89,12 @@ sudo docker-compose up -d
 After installation, open your browser:
 
 ```
-http://<your-server-ip>
+http://<your-server-ip>:9000
 ```
 
-Example: `http://192.168.1.100`
+Example: `http://192.168.1.100:9000`
 
-**No port number needed!** (Runs on port 80)
+**Port 9000** is used to avoid conflicts with other services on port 80.
 
 ---
 
@@ -108,7 +108,7 @@ sudo docker ps | grep freeradius-control
 
 You should see:
 ```
-freeradius-control   Up X minutes   0.0.0.0:80->80/tcp
+freeradius-control   Up X minutes   0.0.0.0:9000->80/tcp
 ```
 
 ---

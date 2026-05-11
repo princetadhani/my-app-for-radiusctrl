@@ -151,8 +151,9 @@ ENV NODE_ENV=production \
 # ============================================
 # Expose Port
 # ============================================
-# Expose port 80 for nginx
-# Users will access the application via http://<host-ip>
+# Expose port 80 for nginx (internal container port)
+# Maps to host port 9000 to avoid conflicts with other services
+# Users will access the application via http://<host-ip>:9000
 EXPOSE 80
 
 # ============================================

@@ -32,7 +32,7 @@ echo "🚀 Starting container..."
 docker run -d \
     --name freeradius-control \
     --restart unless-stopped \
-    -p 80:80 \
+    -p 9000:80 \
     -v /etc/freeradius/3.0:/etc/freeradius/3.0 \
     -v /var/log/freeradius:/var/log/freeradius \
     -v /run/systemd/private:/run/systemd/private \
@@ -49,7 +49,7 @@ echo ""
 echo "Container name: freeradius-control"
 echo ""
 echo "Access the application at:"
-echo "  http://$(hostname -I | awk '{print $1}')"
+echo "  http://$(hostname -I | awk '{print $1}'):9000"
 echo ""
 echo "Useful commands:"
 echo "  View logs:    docker logs -f freeradius-control"

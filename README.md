@@ -40,7 +40,7 @@ A modern, production-ready web interface for managing FreeRADIUS configuration w
 # 2. Run the container
 ./docker/run.sh
 
-# 3. Access at http://<your-ip>
+# 3. Access at http://<your-ip>:9000
 ```
 
 **For complete Docker instructions:** See [DOCKER_DEPLOYMENT.md](DOCKER_DEPLOYMENT.md)
