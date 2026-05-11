@@ -17,12 +17,6 @@ const IS_BROWSER = typeof window !== 'undefined';
 const API_BASE_URL = IS_BROWSER ? '' : 'http://localhost:3001';
 const WS_URL = IS_BROWSER ? '' : 'http://localhost:3001';
 
-console.log('🔧 API Configuration:', {
-  API_BASE_URL: API_BASE_URL || 'relative (same-origin)',
-  WS_URL: WS_URL || 'relative (same-origin)',
-  mode: IS_BROWSER ? 'browser' : 'server',
-});
-
 // WebSocket singleton
 let socket: Socket | null = null;
 
@@ -136,7 +130,6 @@ export async function getFileContent(path: string): Promise<FileContentResponse>
   }
 
   const data = await res.json();
-  console.log('getFileContent response:', data);
   return data;
 }
 
@@ -146,13 +139,33 @@ export async function saveFile(
   mtime: number | null,
   force = false
 ): Promise<SaveFileResponse> {
+  // No timeout - let large files take as long as they need
+  // Backend has 300s (5 min) timeout for validation of 100k+ line configs
   const res = await fetch(`${API_BASE_URL}/api/files/save`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ path, content, mtime, force }),
   });
+
   if (!res.ok) {
-    throw new Error(`Failed to save file: ${res.status}`);
+    let errorMessage = `Failed to save file: ${res.status}`;
+    try {
+      const errorData = await res.json();
+      if (errorData.error) {
+        errorMessage = `Failed to save file: ${errorData.error}`;
+      }
+    } catch {
+      // If response is not JSON, try text
+      try {
+        const errorText = await res.text();
+        if (errorText) {
+          errorMessage = `Failed to save file: ${res.status} - ${errorText}`;
+        }
+      } catch {
+        // Keep original error message
+      }
+    }
+    throw new Error(errorMessage);
   }
   return await res.json();
 }

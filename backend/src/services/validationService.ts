@@ -21,9 +21,12 @@ export async function validateConfiguration(configDir: string): Promise<Validati
     // Full path required (not -D flag)
 
     try {
+      // Increased timeout to 300 seconds (5 minutes) to handle very large config files
+      // FreeRADIUS validation of 100k+ line configs can take 3-5 minutes
+      // e.g., clients.conf with 107k entries takes ~3-4 minutes to validate
       const { stdout, stderr } = await freeradius(
         `-CX ${configDir}`,
-        { timeout: 30000 }
+        { timeout: 300000 }
       );
 
       const output = stdout + stderr;

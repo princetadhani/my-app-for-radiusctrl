@@ -67,6 +67,15 @@ export function EditorPanel({ filePath, deployConsoleRef, onDeleteDictionary }: 
         } else {
           console.log('File is empty (new file)');
         }
+
+        // Warn for large files (> 5MB)
+        const sizeInMB = data.content.length / (1024 * 1024);
+        if (sizeInMB > 5) {
+          customToast.warning(
+            `Large file detected (${sizeInMB.toFixed(1)}MB). Save operations may take 1-2 minutes.`,
+            8000
+          );
+        }
         setContent(data.content);
         setMtime(data.mtime);
         setIsReadOnly(data.readOnly || false);
@@ -102,6 +111,15 @@ export function EditorPanel({ filePath, deployConsoleRef, onDeleteDictionary }: 
     const currentFilePath = filePathRef.current;
     const currentContent = contentRef.current;
     const currentMtime = mtimeRef.current;
+
+    // Check file size and show appropriate message
+    const sizeInMB = currentContent.length / (1024 * 1024);
+    if (sizeInMB > 5) {
+      customToast.info(
+        `Saving large file (${sizeInMB.toFixed(1)}MB)... This may take up to 2 minutes. Please wait.`,
+        10000
+      );
+    }
 
     setIsSaving(true);
     console.log('💾 Saving file:', currentFilePath, 'Content length:', currentContent.length, 'mtime:', currentMtime);
@@ -377,9 +395,9 @@ export function EditorPanel({ filePath, deployConsoleRef, onDeleteDictionary }: 
             fontLigatures: true,
             lineHeight: 20,
 
-            // Minimap
+            // Minimap - Disable for very large files (> 10k lines) for better performance
             minimap: {
-              enabled: true,
+              enabled: content.split('\n').length < 10000,
               scale: 1,
               showSlider: "mouseover"
             },
@@ -402,6 +420,10 @@ export function EditorPanel({ filePath, deployConsoleRef, onDeleteDictionary }: 
             // UI Elements
             overviewRulerBorder: false,
             hideCursorInOverviewRuler: true,
+
+            // Performance optimizations for large files
+            // These settings improve rendering performance significantly
+            largeFileOptimizations: content.length > 1024 * 1024, // Enable for files > 1MB
 
             // Scrollbar (hidden but functional)
             scrollbar: {

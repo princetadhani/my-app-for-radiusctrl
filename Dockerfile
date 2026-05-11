@@ -124,11 +124,17 @@ RUN chmod +x /entrypoint.sh
 # ============================================
 # Create required directories
 # ============================================
+# Create nginx temp directories with proper subdirectories for client_body, proxy, fastcgi, etc.
 RUN mkdir -p /var/log/supervisor \
     /var/log/nginx \
-    /var/lib/nginx/tmp \
+    /var/lib/nginx/tmp/client_body \
+    /var/lib/nginx/tmp/proxy \
+    /var/lib/nginx/tmp/fastcgi \
+    /var/lib/nginx/tmp/uwsgi \
+    /var/lib/nginx/tmp/scgi \
     /run/nginx && \
-    chown -R node:node /var/log/supervisor /var/log/nginx /var/lib/nginx /run/nginx
+    chown -R node:node /var/log/supervisor /var/log/nginx && \
+    chmod -R 777 /var/lib/nginx /run/nginx
 
 # ============================================
 # Environment Variables
