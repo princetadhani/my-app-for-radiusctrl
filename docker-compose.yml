@@ -13,7 +13,7 @@
 #   docker-compose up -d
 #
 # ACCESS:
-#   http://<your-host-ip>
+#   http://<your-host-ip>:9000
 # ============================================
 
 version: '3.8'
@@ -29,10 +29,11 @@ services:
       dockerfile: Dockerfile
     
     # Port mapping
-    # Internal port 80 (nginx) -> Host port 80
-    # Users access via http://<host-ip>
+    # Internal port 80 (nginx) -> Host port 9000
+    # Uses port 9000 to avoid conflicts with other web servers
+    # Users access via http://<host-ip>:9000
     ports:
-      - "80:80"
+      - "9000:80"
     
     # Volume mounts
     # These bind host directories to container paths

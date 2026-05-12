@@ -89,7 +89,7 @@ cat > "$DIST_DIR/INSTALL.txt" << 'EOF'
 4. Log out and log back in
 5. Run: ./docker/load-image.sh freeradius-control.tar.gz
 6. Run: ./docker/run.sh
-7. Access: http://<your-ip>
+7. Access: http://<your-ip>:9000
 
 📖 DETAILED INSTRUCTIONS:
   See QUICKSTART.md or DOCKER_DEPLOYMENT.md

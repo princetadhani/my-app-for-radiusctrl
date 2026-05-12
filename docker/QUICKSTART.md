@@ -79,7 +79,7 @@ docker run -d \
 
 Open your browser and go to:
 ```
-http://<your-ip-address>
+http://<your-ip-address>:9000
 ```
 
 To find your IP:
@@ -175,7 +175,7 @@ Common issues:
 
 You should now have the FreeRADIUS Control Panel running at:
 ```
-http://<your-ip>
+http://<your-ip>:9000
 ```
 
 Enjoy! 🚀
