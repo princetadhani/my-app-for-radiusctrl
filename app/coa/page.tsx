@@ -159,6 +159,49 @@ export default function CoaPage() {
             editor.setValue(attributes);
         }
 
+        // Configure INI language to properly recognize comments after whitespace
+        monaco.languages.setLanguageConfiguration('ini', {
+            comments: {
+                lineComment: '#',
+            },
+        });
+
+        // Register custom tokenizer for INI files to handle comments properly
+        monaco.languages.setMonarchTokensProvider('ini', {
+            tokenizer: {
+                root: [
+                    // Comments (# at start of line or after whitespace)
+                    [/^\s*#.*$/, 'comment'],
+                    [/#.*$/, 'comment'],
+
+                    // Section headers [section]
+                    [/^\s*\[.*\]/, 'keyword'],
+
+                    // Key-value pairs
+                    [/^\s*[\w\-\.]+\s*[:=]/, 'variable'],
+
+                    // Strings (quoted)
+                    [/"([^"\\]|\\.)*$/, 'string.invalid'],
+                    [/'([^'\\]|\\.)*$/, 'string.invalid'],
+                    [/"/, 'string', '@string_double'],
+                    [/'/, 'string', '@string_single'],
+
+                    // Numbers
+                    [/\d+/, 'number'],
+                ],
+                string_double: [
+                    [/[^\\"]+/, 'string'],
+                    [/\\./, 'string.escape'],
+                    [/"/, 'string', '@pop'],
+                ],
+                string_single: [
+                    [/[^\\']+/, 'string'],
+                    [/\\./, 'string.escape'],
+                    [/'/, 'string', '@pop'],
+                ],
+            },
+        });
+
         // Add keyboard shortcut for save (Ctrl/Cmd + S)
         editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, async () => {
             // Call save directly without checking state inside the callback
