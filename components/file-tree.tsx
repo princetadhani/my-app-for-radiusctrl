@@ -1,7 +1,7 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, Folder, FileText, Shield, Users, KeyRound, PanelLeftClose, PanelLeft, UsersRound, Plus, BookOpen } from 'lucide-react';
+import { ChevronRight, Folder, FolderOpen, FileText, Shield, Users, KeyRound, PanelLeftClose, PanelLeft, UsersRound, Plus, BookOpen } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import type { FileNode } from '@/lib/api';
@@ -29,13 +29,14 @@ function TreeNode({
   level?: number;
   onNewDictionary?: () => void;
 }) {
-  // Start with all directories collapsed for cleaner initial view
-  const [isExpanded, setIsExpanded] = useState(false);
+  // Make users.d directory open by default, rest collapsed
+  const isUsersDir = node.name === 'users.d';
+  const [isExpanded, setIsExpanded] = useState(isUsersDir);
   const [isHovered, setIsHovered] = useState(false);
 
   const getIcon = () => {
     if (node.type === 'directory') {
-      // Special icon for users.d directory - UsersRound (group of users)
+      // Special icon for users.d directory - UsersRound (group of users) - No animation
       if (node.name === 'users.d') {
         return (
           <UsersRound
@@ -47,7 +48,7 @@ function TreeNode({
         );
       }
 
-      // Special icon for dictionary.d directory - BookOpen
+      // Special icon for dictionary.d directory - BookOpen - No animation
       if (node.name === 'dictionary.d') {
         return (
           <BookOpen
@@ -59,11 +60,19 @@ function TreeNode({
         );
       }
 
-      return (
+      // Regular folders - Animated FolderOpen/Folder icons
+      return isExpanded ? (
+        <FolderOpen
+          className="w-3.5 h-3.5"
+          style={{
+            color: '#7aa2f7' // Blue when open
+          }}
+        />
+      ) : (
         <Folder
           className="w-3.5 h-3.5"
           style={{
-            color: isExpanded ? '#7aa2f7' : '#7aa2f799' // Blue - Folders
+            color: '#7aa2f799' // Faded blue when closed
           }}
         />
       );
