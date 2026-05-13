@@ -136,10 +136,6 @@ export default function CoaPage() {
             // Reload file content from server to ensure sync
             const savedContent = await getCoaFileContent(fileName);
             setAttributes(savedContent);
-            // Also update editor directly to ensure sync
-            if (editorRef.current) {
-                editorRef.current.setValue(savedContent);
-            }
             setOriginalContent(savedContent);
             setIsModified(false);
             customToast.success('File saved successfully');
@@ -152,12 +148,6 @@ export default function CoaPage() {
 
     const handleEditorDidMount: OnMount = useCallback((editor, monaco) => {
         editorRef.current = editor;
-
-        // Set initial content programmatically to avoid controlled component issues
-        // This prevents the first character skip bug
-        if (attributes && editor.getValue() !== attributes) {
-            editor.setValue(attributes);
-        }
 
         // Configure INI language to properly recognize comments after whitespace
         monaco.languages.setLanguageConfiguration('ini', {
@@ -242,10 +232,6 @@ export default function CoaPage() {
 
     const handleResetConfirm = () => {
         setAttributes(originalContent);
-        // Also update editor directly to ensure sync
-        if (editorRef.current) {
-            editorRef.current.setValue(originalContent);
-        }
         setIsModified(false);
         setIsResetDialogOpen(false);
         customToast.success('Changes reset');
@@ -388,7 +374,7 @@ export default function CoaPage() {
                                 height="100%"
                                 width="100%"
                                 defaultLanguage="ini"
-                                defaultValue={attributes}
+                                value={attributes}
                                 onChange={handleEditorChange}
                                 onMount={handleEditorDidMount}
                                 theme="radius-dark"

@@ -182,12 +182,6 @@ export function EditorPanel({ filePath, deployConsoleRef, onDeleteDictionary }: 
   const handleEditorDidMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
 
-    // Set initial content programmatically to avoid controlled component issues
-    // This prevents the first character skip bug
-    if (content && editor.getValue() !== content) {
-      editor.setValue(content);
-    }
-
     // Configure INI language to properly recognize comments after whitespace
     monaco.languages.setLanguageConfiguration('ini', {
       comments: {
@@ -389,10 +383,6 @@ export function EditorPanel({ filePath, deployConsoleRef, onDeleteDictionary }: 
     // Reload file content
     getFileContent(filePath).then(data => {
       setContent(data.content);
-      // Also update editor directly to ensure sync
-      if (editorRef.current) {
-        editorRef.current.setValue(data.content);
-      }
       setIsModified(false);
       customToast.success('Changes reset');
     });
@@ -437,7 +427,7 @@ export function EditorPanel({ filePath, deployConsoleRef, onDeleteDictionary }: 
           height="100%"
           width="100%"
           defaultLanguage="ini"
-          defaultValue={content}
+          value={content}
           onChange={handleEditorChange}
           onMount={handleEditorDidMount}
           theme="radius-dark"
