@@ -113,8 +113,13 @@ export default function CoaPage() {
     }, []);
 
     const handleEditorChange = (value: string | undefined) => {
-        setAttributes(value || '');
-        setIsModified(true);
+        const newValue = value || '';
+        // Only update state if the value actually changed
+        // This prevents unnecessary re-renders that can cause the first character skip bug
+        if (newValue !== attributes) {
+            setAttributes(newValue);
+            setIsModified(true);
+        }
     };
 
     const handleSaveFile = useCallback(async () => {
@@ -131,6 +136,10 @@ export default function CoaPage() {
             // Reload file content from server to ensure sync
             const savedContent = await getCoaFileContent(fileName);
             setAttributes(savedContent);
+            // Also update editor directly to ensure sync
+            if (editorRef.current) {
+                editorRef.current.setValue(savedContent);
+            }
             setOriginalContent(savedContent);
             setIsModified(false);
             customToast.success('File saved successfully');
@@ -143,6 +152,12 @@ export default function CoaPage() {
 
     const handleEditorDidMount: OnMount = useCallback((editor, monaco) => {
         editorRef.current = editor;
+
+        // Set initial content programmatically to avoid controlled component issues
+        // This prevents the first character skip bug
+        if (attributes && editor.getValue() !== attributes) {
+            editor.setValue(attributes);
+        }
 
         // Add keyboard shortcut for save (Ctrl/Cmd + S)
         editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, async () => {
@@ -184,6 +199,10 @@ export default function CoaPage() {
 
     const handleResetConfirm = () => {
         setAttributes(originalContent);
+        // Also update editor directly to ensure sync
+        if (editorRef.current) {
+            editorRef.current.setValue(originalContent);
+        }
         setIsModified(false);
         setIsResetDialogOpen(false);
         customToast.success('Changes reset');
@@ -326,7 +345,7 @@ export default function CoaPage() {
                                 height="100%"
                                 width="100%"
                                 defaultLanguage="ini"
-                                value={attributes}
+                                defaultValue={attributes}
                                 onChange={handleEditorChange}
                                 onMount={handleEditorDidMount}
                                 theme="radius-dark"

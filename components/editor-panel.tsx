@@ -170,12 +170,23 @@ export function EditorPanel({ filePath, deployConsoleRef, onDeleteDictionary }: 
     if (isReadOnly) {
       return;
     }
-    setContent(value || '');
-    setIsModified(true);
+    const newValue = value || '';
+    // Only update state if the value actually changed
+    // This prevents unnecessary re-renders that can cause the first character skip bug
+    if (newValue !== content) {
+      setContent(newValue);
+      setIsModified(true);
+    }
   };
 
   const handleEditorDidMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
+
+    // Set initial content programmatically to avoid controlled component issues
+    // This prevents the first character skip bug
+    if (content && editor.getValue() !== content) {
+      editor.setValue(content);
+    }
 
     // Define the custom "radius-dark" theme
     monaco.editor.defineTheme("radius-dark", {
@@ -335,6 +346,10 @@ export function EditorPanel({ filePath, deployConsoleRef, onDeleteDictionary }: 
     // Reload file content
     getFileContent(filePath).then(data => {
       setContent(data.content);
+      // Also update editor directly to ensure sync
+      if (editorRef.current) {
+        editorRef.current.setValue(data.content);
+      }
       setIsModified(false);
       customToast.success('Changes reset');
     });
@@ -379,7 +394,7 @@ export function EditorPanel({ filePath, deployConsoleRef, onDeleteDictionary }: 
           height="100%"
           width="100%"
           defaultLanguage="ini"
-          value={content}
+          defaultValue={content}
           onChange={handleEditorChange}
           onMount={handleEditorDidMount}
           theme="radius-dark"
