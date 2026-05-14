@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { StatusHeader } from '@/components/status-header';
 import { FileTree } from '@/components/file-tree';
@@ -10,6 +10,7 @@ import { CommandPalette } from '@/components/command-palette';
 import { NewUserDialog } from '@/components/new-user-dialog';
 import { NewDictionaryDialog } from '@/components/new-dictionary-dialog';
 import { getFileTree, getSocket, createDictionaryFile, listDictionaryFiles, type FileNode } from '@/lib/api';
+import { filterFileTreeForSidebar } from '@/lib/fileTreeFilter';
 import { toast } from 'sonner';
 import { customToast } from '@/lib/custom-toast';
 import { TriangleAlert, FilePlus, Trash2, X } from 'lucide-react';
@@ -24,6 +25,12 @@ function HomeContent() {
   const deployConsoleRef = useRef<DeployConsoleHandle>(null);
   const searchParams = useSearchParams();
   const router = useRouter();
+
+  // Filter file tree for sidebar (only show allowed files/directories)
+  // Command Palette gets the full unfiltered tree
+  const filteredFileTreeForSidebar = useMemo(() => {
+    return filterFileTreeForSidebar(fileTree);
+  }, [fileTree]);
 
   // Load file tree on mount
   useEffect(() => {
@@ -339,9 +346,9 @@ function HomeContent() {
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden" style={{ paddingTop: '3rem' }}>
-        {/* Sidebar */}
+        {/* Sidebar - Filtered file tree (only allowed files/directories) */}
         <FileTree
-          nodes={fileTree}
+          nodes={filteredFileTreeForSidebar}
           activeFile={activeFile}
           onFileSelect={setActiveFile}
           isCollapsed={isSidebarCollapsed}
