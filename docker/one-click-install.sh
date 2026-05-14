@@ -117,64 +117,27 @@ cd freeradius-control-docker
 echo -e "${GREEN}✓ Extracted successfully${NC}"
 
 ##############################################################################
-# Step 3: Setup Host Permissions
+# Step 3: Setup Host Permissions & FreeRADIUS Installation
+# Note: FreeRADIUS installation/service management is handled by setup-permissions.sh
 ##############################################################################
 echo ""
-echo -e "${BLUE}[3/6] Configuring host system permissions...${NC}"
+echo -e "${BLUE}[3/5] Configuring host system permissions and FreeRADIUS...${NC}"
 
 if [ -f "./scripts/setup-permissions.sh" ]; then
     chmod +x ./scripts/setup-permissions.sh
     AUTO_YES=1 ./scripts/setup-permissions.sh
-    echo -e "${GREEN}✓ Permissions configured${NC}"
+    echo -e "${GREEN}✓ Permissions configured and FreeRADIUS setup complete${NC}"
 else
     echo -e "${YELLOW}⚠ setup-permissions.sh not found, skipping...${NC}"
 fi
 
-##############################################################################
-# Step 4: Check and Install FreeRADIUS if needed
-##############################################################################
-echo ""
-echo -e "${BLUE}[4/6] Checking FreeRADIUS installation...${NC}"
 
-# Check if FreeRADIUS is installed
-FREERADIUS_INSTALLED=false
-if command -v freeradius >/dev/null 2>&1 || [ -d "/etc/freeradius/3.0" ]; then
-    FREERADIUS_INSTALLED=true
-fi
-
-if [ "$FREERADIUS_INSTALLED" = false ]; then
-    echo -e "${YELLOW}⚠ FreeRADIUS not found. Installing FreeRADIUS and freeradius-utils...${NC}"
-
-    # Detect package manager and install
-    if command -v apt-get >/dev/null 2>&1; then
-        apt-get update -qq
-        apt-get install -y freeradius freeradius-utils
-    elif command -v yum >/dev/null 2>&1; then
-        yum install -y freeradius freeradius-utils
-    elif command -v dnf >/dev/null 2>&1; then
-        dnf install -y freeradius freeradius-utils
-    elif command -v zypper >/dev/null 2>&1; then
-        zypper install -y freeradius-server freeradius-server-utils
-    else
-        echo -e "${RED}ERROR: Could not detect package manager!${NC}"
-        echo "Please install FreeRADIUS manually and re-run this script."
-        exit 1
-    fi
-
-    echo -e "${GREEN}✓ FreeRADIUS installed successfully${NC}"
-elif [ ! -d "/etc/freeradius/3.0" ]; then
-    echo -e "${RED}ERROR: FreeRADIUS installed but /etc/freeradius/3.0 not found${NC}"
-    echo "This may be a version mismatch. FreeRADIUS 3.0 is required."
-    exit 1
-else
-    echo -e "${GREEN}✓ FreeRADIUS directory found${NC}"
-fi
 
 ##############################################################################
-# Step 5: Load Docker Image
+# Step 4: Load Docker Image
 ##############################################################################
 echo ""
-echo -e "${BLUE}[5/6] Loading Docker image...${NC}"
+echo -e "${BLUE}[4/5] Loading Docker image...${NC}"
 
 if [ -f "./freeradius-control.tar" ]; then
     docker load < ./freeradius-control.tar
@@ -185,10 +148,10 @@ else
 fi
 
 ##############################################################################
-# Step 6: Start Container
+# Step 5: Start Container
 ##############################################################################
 echo ""
-echo -e "${BLUE}[6/6] Starting FreeRADIUS Control Panel...${NC}"
+echo -e "${BLUE}[5/5] Starting FreeRADIUS Control Panel...${NC}"
 
 # Stop and remove existing container if it exists
 docker stop freeradius-control 2>/dev/null || true

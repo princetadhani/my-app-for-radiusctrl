@@ -66,6 +66,45 @@ if [ "$FREERADIUS_INSTALLED" = false ]; then
     fi
 
     echo "✅ FreeRADIUS installed successfully"
+
+    # After installation, enable and start the service
+    echo "📦 Enabling and starting FreeRADIUS service..."
+    if command -v systemctl >/dev/null 2>&1; then
+        sudo systemctl enable freeradius 2>/dev/null || true
+        sudo systemctl start freeradius 2>/dev/null || true
+        echo "✅ FreeRADIUS service enabled and started"
+    else
+        echo "⚠️  systemctl not found. Please start FreeRADIUS manually."
+    fi
+else
+    echo "✅ FreeRADIUS is already installed"
+
+    # FreeRADIUS is installed - manage the service
+    if command -v systemctl >/dev/null 2>&1; then
+        echo "🔧 Checking FreeRADIUS service status..."
+
+        # Check if service is enabled
+        if ! sudo systemctl is-enabled freeradius >/dev/null 2>&1; then
+            echo "⚠️  FreeRADIUS service is disabled. Enabling..."
+            sudo systemctl enable freeradius 2>/dev/null || true
+            echo "✅ FreeRADIUS service enabled"
+        else
+            echo "✅ FreeRADIUS service is already enabled"
+        fi
+
+        # Check if service is running
+        if ! sudo systemctl is-active freeradius >/dev/null 2>&1; then
+            echo "⚠️  FreeRADIUS service is stopped. Starting..."
+            sudo systemctl start freeradius 2>/dev/null || true
+            echo "✅ FreeRADIUS service started"
+        else
+            echo "🔄 FreeRADIUS service is running. Restarting for better experience..."
+            sudo systemctl restart freeradius 2>/dev/null || true
+            echo "✅ FreeRADIUS service restarted"
+        fi
+    else
+        echo "⚠️  systemctl not found. Please manage FreeRADIUS service manually."
+    fi
 fi
 
 # Determine FreeRADIUS group
