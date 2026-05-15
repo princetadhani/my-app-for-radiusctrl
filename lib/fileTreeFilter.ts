@@ -23,12 +23,12 @@ export const FILE_TREE_ALLOWLIST = {
    * All contents within these directories will be shown (nested filtering not applied).
    */
   directories: [
-    'dictionary.d',
     'mods-available',
     'mods-config',
     'mods-enabled',
     'sites-available',
     'sites-enabled',
+    'dictionary.d',
     'users.d',
   ] as const,
 
@@ -46,11 +46,13 @@ export const FILE_TREE_ALLOWLIST = {
 
 /**
  * Filter file tree nodes based on the allowlist configuration
- * 
+ *
  * This function recursively filters the file tree to show only allowed
  * directories and files at the root level (3.0/), while preserving
  * all children within allowed directories.
- * 
+ *
+ * The order of items in the sidebar follows the order defined in the allowlist.
+ *
  * @param nodes - The file tree nodes to filter
  * @param isRootLevel - Whether we're at the root level (3.0/)
  * @returns Filtered file tree nodes
@@ -68,7 +70,7 @@ export function filterFileTreeForSidebar(
   }
 
   // At root level - filter based on allowlist
-  return nodes
+  const filtered = nodes
     .filter(node => {
       if (node.type === 'directory') {
         return FILE_TREE_ALLOWLIST.directories.includes(node.name as any);
@@ -81,6 +83,23 @@ export function filterFileTreeForSidebar(
       // For allowed directories, include all their children without filtering
       children: node.children ? filterFileTreeForSidebar(node.children, false) : undefined,
     }));
+
+  // Sort according to the order in the allowlist
+  // Directories first (in allowlist order), then files (in allowlist order)
+  return filtered.sort((a, b) => {
+    if (a.type === 'directory' && b.type === 'directory') {
+      const indexA = FILE_TREE_ALLOWLIST.directories.indexOf(a.name as any);
+      const indexB = FILE_TREE_ALLOWLIST.directories.indexOf(b.name as any);
+      return indexA - indexB;
+    } else if (a.type === 'file' && b.type === 'file') {
+      const indexA = FILE_TREE_ALLOWLIST.files.indexOf(a.name as any);
+      const indexB = FILE_TREE_ALLOWLIST.files.indexOf(b.name as any);
+      return indexA - indexB;
+    } else {
+      // Directories before files
+      return a.type === 'directory' ? -1 : 1;
+    }
+  });
 }
 
 /**
