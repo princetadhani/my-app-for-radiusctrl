@@ -134,19 +134,19 @@ echo "Proceeding with user '$USER_NAME' in group '$RADIUS_GROUP'..."
 echo ""
 
 # Step 1: Add user to group
-echo "[1/5] Adding user to $RADIUS_GROUP group..."
+echo "[1/6] Adding user to $RADIUS_GROUP group..."
 sudo usermod -aG $RADIUS_GROUP $USER_NAME
 echo "✅ Done"
 echo ""
 
 # Step 2: Set group permissions on ALL directories (including certs)
-echo "[2/5] Adding group write permission to ALL directories (including /certs/)..."
+echo "[2/6] Adding group write permission to ALL directories (including /certs/)..."
 sudo find /etc/freeradius/3.0 -type d -exec chmod g+rw {} \;
 echo "✅ Done"
 echo ""
 
 # Step 3: Set group permissions on ALL files (including certs)
-echo "[3/5] Adding group write permission to ALL files (including /certs/)..."
+echo "[3/6] Adding group write permission to ALL files (including /certs/)..."
 sudo find /etc/freeradius/3.0 -type f -exec chmod g+rw {} \;
 echo "✅ Done"
 echo ""
