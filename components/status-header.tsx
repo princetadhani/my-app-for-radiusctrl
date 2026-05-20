@@ -114,26 +114,58 @@ export function StatusHeader({ currentFile, onNewUserClick }: StatusHeaderProps)
       <div className="flex items-center gap-3">
         {/* Navigation Buttons - Hidden on mobile */}
         <nav className="hidden md:flex items-center gap-3">
-          {/* New User Button */}
-          <button
-            onClick={handleNewUserClick}
-            className="flex items-center gap-1.5 px-2 py-1 rounded transition-all duration-200 text-xs"
-            style={{
-              fontFamily: 'var(--font-inter)',
-              color: 'hsl(215, 15%, 55%)',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'rgba(29, 35, 50, 0.5)';
-              e.currentTarget.style.color = 'hsl(210, 40%, 92%)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.color = 'hsl(215, 15%, 55%)';
-            }}
-          >
-            <UserPlus className="w-3 h-3" />
-            <span>New User</span>
-          </button>
+          {/* New User Button with Tooltip */}
+          <span className="relative inline-flex items-center group/newuser">
+            {/* Glassmorphic Tooltip */}
+            <span
+              className="absolute top-full left-1/2 -translate-x-1/2 px-5 py-3 text-sm text-white text-center border opacity-0 invisible group-hover/newuser:opacity-100 group-hover/newuser:visible transition-all duration-[400ms] pointer-events-none z-[9999]"
+              style={{
+                background: 'rgba(255, 255, 255, 0.1)',
+                borderColor: 'rgba(255, 255, 255, 0.3)',
+                backdropFilter: 'blur(12px)',
+                boxShadow: '0 8px 20px rgba(0, 0, 0, 0.4), inset 0 0 10px rgba(255, 255, 255, 0.3)',
+                marginTop: '10px',
+                borderRadius: '20px',
+                minWidth: '320px',
+              }}
+            >
+              <div className="leading-relaxed">
+                <div style={{ color: 'hsl(210, 15%, 85%)', fontSize: '13px', lineHeight: '1.5' }}>
+                  Creates per-person user file in <span className="font-mono text-[11px] px-1.5 py-0.5 rounded" style={{ backgroundColor: 'rgba(122, 162, 247, 0.25)', color: 'hsl(210, 100%, 85%)' }}>users.d/</span> directory where you can manage your own radius auth-users.
+                </div>
+              </div>
+              {/* Tooltip Arrow */}
+              <span
+                className="absolute bottom-full left-1/2 -translate-x-1/2"
+                style={{
+                  borderWidth: '7px',
+                  borderStyle: 'solid',
+                  borderColor: 'transparent transparent rgba(255, 255, 255, 0.3) transparent',
+                  filter: 'drop-shadow(0px 2px 4px rgba(0, 0, 0, 0.3))'
+                }}
+              />
+            </span>
+
+            <button
+              onClick={handleNewUserClick}
+              className="flex items-center gap-1.5 px-2 py-1 rounded transition-all duration-200 text-xs"
+              style={{
+                fontFamily: 'var(--font-inter)',
+                color: 'hsl(215, 15%, 55%)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(29, 35, 50, 0.5)';
+                e.currentTarget.style.color = 'hsl(210, 40%, 92%)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = 'hsl(215, 15%, 55%)';
+              }}
+            >
+              <UserPlus className="w-3 h-3" />
+              <span>New User</span>
+            </button>
+          </span>
           <Link
             href="/logs"
             className="flex items-center gap-1.5 px-2 py-1 rounded transition-all duration-200 text-xs"
