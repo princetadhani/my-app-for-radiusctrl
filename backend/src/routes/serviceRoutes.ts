@@ -18,6 +18,20 @@ router.get('/status', async (req, res, next) => {
 });
 
 /**
+ * GET /api/service/dashboarddatadump
+ * Get dashboard data dump (service status + network interfaces)
+ * Combines service status with live network interface discovery
+ */
+router.get('/dashboarddatadump', async (req, res, next) => {
+  try {
+    const data = await serviceStatusService.getDashboardDataDump();
+    res.json(data);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
  * POST /api/service/reload
  * Reload FreeRADIUS service
  */

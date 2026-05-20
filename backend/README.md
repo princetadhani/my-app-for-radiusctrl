@@ -69,6 +69,7 @@ npm start
 
 ### Service
 - `GET /api/service/status` - Get service status
+- `GET /api/service/dashboarddatadump` - Get dashboard data dump (service status + network interfaces)
 - `POST /api/service/reload` - Reload service
 - `POST /api/service/restart` - Restart service
 

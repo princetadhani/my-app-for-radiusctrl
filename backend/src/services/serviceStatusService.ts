@@ -1,6 +1,6 @@
 import config from '../config';
 import logger from '../utils/logger';
-import { systemctl } from '../utils/hostCommand';
+import { systemctl, execOnHost } from '../utils/hostCommand';
 
 export interface ServiceStatus {
   status: 'running' | 'stopped' | 'unknown';
@@ -9,6 +9,34 @@ export interface ServiceStatus {
   pid?: number;
   memory?: number;
   description?: string;
+}
+
+export interface DashboardDataDump extends ServiceStatus {
+  interfaces: string[];
+}
+
+/**
+ * Get network interfaces (IPv4 only, excluding Docker/bridge interfaces)
+ * Command: ip -4 -o addr show scope global 2>/dev/null | grep -Ev '\s(docker[0-9]*|br-[a-f0-9]+|virbr[0-9]*)\s' | awk '{print $4}' | cut -d/ -f1
+ * Returns empty array on error or timeout (5 seconds)
+ */
+export async function getNetworkInterfaces(): Promise<string[]> {
+  try {
+    const command = `ip -4 -o addr show scope global 2>/dev/null | grep -Ev '\\s(docker[0-9]*|br-[a-f0-9]+|virbr[0-9]*)\\s' | awk '{print $4}' | cut -d/ -f1`;
+
+    const { stdout } = await execOnHost(command, { timeout: 5000 });
+
+    // Parse output: split by newlines, trim, filter empty strings
+    const interfaces = stdout
+      .split('\n')
+      .map(line => line.trim())
+      .filter(Boolean);
+
+    return interfaces;
+  } catch (error: any) {
+    logger.error(`Error getting network interfaces: ${error.message}`);
+    return [];
+  }
 }
 
 /**
@@ -118,8 +146,37 @@ export async function restartService(): Promise<{ success: boolean; message: str
   }
 }
 
+/**
+ * Get dashboard data dump (service status + network interfaces)
+ * Runs both queries in parallel for better performance
+ */
+export async function getDashboardDataDump(): Promise<DashboardDataDump> {
+  try {
+    // Run both queries in parallel
+    const [status, interfaces] = await Promise.all([
+      getServiceStatus(),
+      getNetworkInterfaces(),
+    ]);
+
+    return {
+      ...status,
+      interfaces,
+    };
+  } catch (error: any) {
+    logger.error(`Error getting dashboard data dump: ${error.message}`);
+    // Return minimal data on error
+    return {
+      status: 'unknown',
+      active: false,
+      interfaces: [],
+    };
+  }
+}
+
 export default {
   getServiceStatus,
   reloadService,
   restartService,
+  getNetworkInterfaces,
+  getDashboardDataDump,
 };
