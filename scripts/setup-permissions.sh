@@ -154,6 +154,29 @@ echo ""
 # Step 4: Create helper directories and fix existing files
 echo "[4/6] Creating helper directories and symlinks..."
 
+# Fix legacy users file - make it a symlink to authorize
+if [ ! -L /etc/freeradius/3.0/users ]; then
+    sudo mv /etc/freeradius/3.0/users /etc/freeradius/3.0/users-ui.bak 2>/dev/null || true
+    sudo ln -s mods-config/files/authorize /etc/freeradius/3.0/users
+    echo "  ✓ users file: backed up and symlinked to authorize"
+
+    # Verify symlink was created
+    if [ -L /etc/freeradius/3.0/users ]; then
+        echo "  ✓ Verified: users is now a symlink"
+
+        # Check if content is identical
+        if diff -q /etc/freeradius/3.0/users /etc/freeradius/3.0/mods-config/files/authorize >/dev/null 2>&1; then
+            echo "  ✓ Verified: users and authorize have identical content"
+        else
+            echo "  ❌ ERROR: users and authorize content differs!"
+        fi
+    else
+        echo "  ❌ ERROR: Failed to create symlink!"
+    fi
+else
+    echo "  ✓ users file: already a symlink (skipping)"
+fi
+
 # COA directory - owned by freerad:freerad (not root!)
 sudo mkdir -p /etc/freeradius/3.0/coa
 sudo chown $RADIUS_GROUP:$RADIUS_GROUP /etc/freeradius/3.0/coa
