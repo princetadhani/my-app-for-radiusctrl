@@ -435,6 +435,7 @@ export function EditorPanel({ filePath, deployConsoleRef, onDeleteDictionary, on
         onReset={handleResetClick}
         onSave={handleSaveFile}
         onDelete={isDictionaryFile || isUserFile ? handleDeleteClick : undefined}
+        deleteTooltip={isUserFile ? 'Delete user file' : isDictionaryFile ? 'Delete dictionary file' : undefined}
         isSaving={isSaving}
       />
 

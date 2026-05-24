@@ -14,6 +14,7 @@ interface EditorTopBarProps {
   onSave?: () => void;
   onDelete?: () => void;
   isSaving?: boolean;
+  deleteTooltip?: string;
 }
 
 export function EditorTopBar({
@@ -26,6 +27,7 @@ export function EditorTopBar({
   onSave,
   onDelete,
   isSaving = false,
+  deleteTooltip,
 }: EditorTopBarProps) {
   const [copied, setCopied] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
@@ -189,7 +191,7 @@ export function EditorTopBar({
           </button>
         )}
 
-        {/* Delete Button - Only for dictionary files */}
+        {/* Delete Button - For dictionary and user files */}
         {onDelete && isMounted && (
           <button
             onClick={onDelete}
@@ -199,7 +201,7 @@ export function EditorTopBar({
               border: '1px solid rgba(237, 135, 150, 0.3)',
               color: '#ed8796',
             }}
-            title="Delete dictionary file"
+            title={deleteTooltip || 'Delete file'}
           >
             <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
             <Trash2 className="w-3.5 h-3.5 relative z-10" />
