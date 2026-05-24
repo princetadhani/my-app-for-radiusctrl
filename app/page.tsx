@@ -364,6 +364,7 @@ function HomeContent() {
               filePath={activeFile}
               deployConsoleRef={deployConsoleRef}
               onDeleteDictionary={handleDeleteDictionary}
+              onNewUserClick={() => setIsNewUserDialogOpen(true)}
             />
           </div>
 

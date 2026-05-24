@@ -8,15 +8,18 @@ import { customToast } from '@/lib/custom-toast';
 import { EditorTopBar } from '@/components/editor-top-bar';
 import { EditorEmptyState } from '@/components/editor-empty-state';
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { ReadOnlyInfoBanner } from '@/components/read-only-info-banner';
+import { FloatingActionButton } from '@/components/floating-action-button';
 import type { DeployConsoleHandle } from '@/components/deploy-console';
 
 interface EditorPanelProps {
   filePath: string;
   deployConsoleRef?: React.RefObject<DeployConsoleHandle>;
   onDeleteDictionary?: (fileName: string) => void;
+  onNewUserClick?: () => void;
 }
 
-export function EditorPanel({ filePath, deployConsoleRef, onDeleteDictionary }: EditorPanelProps) {
+export function EditorPanel({ filePath, deployConsoleRef, onDeleteDictionary, onNewUserClick }: EditorPanelProps) {
   const [content, setContent] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isModified, setIsModified] = useState(false);
@@ -405,12 +408,18 @@ export function EditorPanel({ filePath, deployConsoleRef, onDeleteDictionary }: 
   // Check if this is a dictionary file
   const isDictionaryFile = filePath.includes('/dictionary.d/') && filePath.split('/').pop()?.startsWith('dictionary.');
 
+  // Check if this is a read-only file (users or authorize)
+  const fileName = filePath.split('/').pop();
+  const isUsersFile = fileName === 'users';
+  const isAuthorizeFile = fileName === 'authorize';
+  const showReadOnlyHelpers = isReadOnly && (isUsersFile || isAuthorizeFile);
+
   return (
     <div className="h-full w-full flex flex-col bg-card">
       {/* Editor Top Bar */}
       <EditorTopBar
         filePath={filePath}
-        fileName={filePath.split('/').pop()}
+        fileName={fileName}
         isModified={isModified}
         isReadOnly={isReadOnly}
         onCopy={handleCopyPath}
@@ -419,6 +428,11 @@ export function EditorPanel({ filePath, deployConsoleRef, onDeleteDictionary }: 
         onDelete={isDictionaryFile ? handleDeleteClick : undefined}
         isSaving={isSaving}
       />
+
+      {/* Read-Only Info Banner - Only show for users or authorize files */}
+      {showReadOnlyHelpers && (
+        <ReadOnlyInfoBanner fileName={fileName} />
+      )}
 
       {/* Monaco Editor */}
       <div className="flex-1 relative bg-[#0d1117] min-h-0">
@@ -483,6 +497,11 @@ export function EditorPanel({ filePath, deployConsoleRef, onDeleteDictionary }: 
             },
           }}
         />
+
+        {/* Floating Action Button - Only show for users file, positioned inside editor */}
+        {showReadOnlyHelpers && isUsersFile && onNewUserClick && (
+          <FloatingActionButton onClick={onNewUserClick} expandedLabel="New User" />
+        )}
       </div>
 
       {/* Reset Confirmation Dialog */}
