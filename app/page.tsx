@@ -336,6 +336,25 @@ function HomeContent() {
     }
   };
 
+  const handleDeleteUser = async (fileName: string) => {
+    try {
+      const { deleteUser } = await import('@/lib/api');
+      await deleteUser(fileName);
+
+      customToast.success(`User "${fileName}" deleted successfully`);
+
+      // Reload file tree to show changes
+      const updatedTree = await getFileTree();
+      setFileTree(updatedTree);
+
+      // Close the file if it was open
+      setActiveFile('');
+    } catch (error: any) {
+      console.error('Failed to delete user:', error);
+      customToast.error(error.message || 'Failed to delete user');
+    }
+  };
+
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       {/* Header */}
@@ -364,6 +383,7 @@ function HomeContent() {
               filePath={activeFile}
               deployConsoleRef={deployConsoleRef}
               onDeleteDictionary={handleDeleteDictionary}
+              onDeleteUser={handleDeleteUser}
               onNewUserClick={() => setIsNewUserDialogOpen(true)}
             />
           </div>

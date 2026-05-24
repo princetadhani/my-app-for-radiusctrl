@@ -96,4 +96,28 @@ router.post('/create-user', async (req, res, next) => {
   }
 });
 
+/**
+ * DELETE /api/files/delete-user
+ * Delete user file and remove $INCLUDE from authorize file
+ * 1. Validate filename
+ * 2. Delete user file from users.d/
+ * 3. Remove $INCLUDE line from authorize file
+ * 4. Validate with freeradius -XC
+ * 5. Rollback if validation fails
+ */
+router.delete('/delete-user', async (req, res, next) => {
+  try {
+    const { filename } = req.body;
+
+    if (!filename) {
+      return res.status(400).json({ error: 'Filename is required' });
+    }
+
+    const result = await fileService.deleteUser(filename);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;

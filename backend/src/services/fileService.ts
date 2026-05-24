@@ -407,3 +407,126 @@ export async function createNewUser(rawFilename: string): Promise<CreateUserResp
     throw error;
   }
 }
+
+/**
+ * Delete user file and remove $INCLUDE from authorize file
+ *
+ * Workflow:
+ * 1. Validate filename
+ * 2. Delete user file from users.d/
+ * 3. Remove $INCLUDE line from authorize file
+ * 4. Validate with freeradius -XC
+ * 5. Rollback if validation fails (restore file and $INCLUDE)
+ */
+export async function deleteUser(filename: string): Promise<{ success: boolean; message: string }> {
+  let userFilePath: string | null = null;
+  let authorizeFilePath: string | null = null;
+  let userFileBackup: string | null = null;
+  let authorizeBackup: string | null = null;
+
+  try {
+    // Step 1: Validate filename
+    logger.info(`Deleting user: ${filename}`);
+
+    // Validate filename
+    if (!/^[a-z0-9]+$/.test(filename)) {
+      return {
+        success: false,
+        message: 'Invalid filename. Must contain only lowercase letters and numbers',
+      };
+    }
+
+    // Step 2: Check if user file exists and backup its content
+    const usersDir = path.join(config.freeradius.baseDir, 'mods-config/files/users.d');
+    userFilePath = path.join(usersDir, filename);
+
+    try {
+      userFileBackup = await fs.readFile(userFilePath, 'utf-8');
+    } catch (error: any) {
+      logger.warn(`User file not found: ${filename}`);
+      return {
+        success: false,
+        message: 'User file not found',
+      };
+    }
+
+    // Step 3: Backup authorize file
+    authorizeFilePath = path.join(config.freeradius.baseDir, 'mods-config/files/authorize');
+    authorizeBackup = await fs.readFile(authorizeFilePath, 'utf-8');
+
+    // Step 4: Delete user file
+    await fs.unlink(userFilePath);
+    logger.info(`Deleted user file: ${userFilePath}`);
+
+    // Step 5: Remove $INCLUDE line from authorize file
+    const includeStatement = `$INCLUDE users.d/${filename}`;
+    const lines = authorizeBackup.split('\n');
+    const filteredLines = lines.filter(line => !line.includes(includeStatement));
+    const newAuthorizeContent = filteredLines.join('\n');
+
+    await fs.writeFile(authorizeFilePath, newAuthorizeContent, 'utf-8');
+    logger.info(`Removed $INCLUDE users.d/${filename} from authorize file`);
+
+    // Step 6: Validate configuration
+    logger.info('Validating configuration with freeradius -XC...');
+    const validation = await validateConfiguration(config.freeradius.baseDir);
+
+    if (!validation.success) {
+      // Validation failed - ROLLBACK
+      logger.warn('Validation failed after delete, rolling back changes...');
+
+      // Rollback: Restore user file
+      if (userFilePath && userFileBackup) {
+        try {
+          await fs.writeFile(userFilePath, userFileBackup, 'utf-8');
+          logger.info(`Rolled back: Restored user file ${userFilePath}`);
+        } catch (error: any) {
+          logger.error(`Failed to restore user file during rollback: ${error.message}`);
+        }
+      }
+
+      // Rollback: Restore authorize file
+      if (authorizeFilePath && authorizeBackup) {
+        try {
+          await fs.writeFile(authorizeFilePath, authorizeBackup, 'utf-8');
+          logger.info(`Rolled back: Restored authorize file`);
+        } catch (error: any) {
+          logger.error(`Failed to restore authorize file during rollback: ${error.message}`);
+        }
+      }
+
+      return {
+        success: false,
+        message: 'Configuration validation failed. Changes were rolled back.',
+      };
+    }
+
+    // Success!
+    logger.info(`User deleted successfully: ${filename}`);
+
+    return {
+      success: true,
+      message: `User "${filename}" deleted successfully`,
+    };
+
+  } catch (error: any) {
+    logger.error(`Error deleting user: ${error.message}`);
+
+    // Emergency rollback
+    if (userFilePath && userFileBackup) {
+      try {
+        await fs.writeFile(userFilePath, userFileBackup, 'utf-8');
+        logger.info(`Emergency rollback: Restored user file`);
+      } catch { }
+    }
+
+    if (authorizeFilePath && authorizeBackup) {
+      try {
+        await fs.writeFile(authorizeFilePath, authorizeBackup, 'utf-8');
+        logger.info(`Emergency rollback: Restored authorize file`);
+      } catch { }
+    }
+
+    throw error;
+  }
+}

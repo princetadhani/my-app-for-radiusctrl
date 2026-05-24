@@ -16,10 +16,11 @@ interface EditorPanelProps {
   filePath: string;
   deployConsoleRef?: React.RefObject<DeployConsoleHandle>;
   onDeleteDictionary?: (fileName: string) => void;
+  onDeleteUser?: (fileName: string) => void;
   onNewUserClick?: () => void;
 }
 
-export function EditorPanel({ filePath, deployConsoleRef, onDeleteDictionary, onNewUserClick }: EditorPanelProps) {
+export function EditorPanel({ filePath, deployConsoleRef, onDeleteDictionary, onDeleteUser, onNewUserClick }: EditorPanelProps) {
   const [content, setContent] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isModified, setIsModified] = useState(false);
@@ -399,14 +400,22 @@ export function EditorPanel({ filePath, deployConsoleRef, onDeleteDictionary, on
   const handleDeleteConfirm = () => {
     if (!filePath) return;
     const fileName = filePath.split('/').pop();
-    if (fileName && onDeleteDictionary) {
+    if (!fileName) return;
+
+    // Check if it's a dictionary file or user file and call appropriate handler
+    if (isDictionaryFile && onDeleteDictionary) {
       onDeleteDictionary(fileName);
-      setIsDeleteDialogOpen(false);
+    } else if (isUserFile && onDeleteUser) {
+      onDeleteUser(fileName);
     }
+    setIsDeleteDialogOpen(false);
   };
 
   // Check if this is a dictionary file
   const isDictionaryFile = filePath.includes('/dictionary.d/') && filePath.split('/').pop()?.startsWith('dictionary.');
+
+  // Check if this is a user file in users.d directory
+  const isUserFile = filePath.includes('/users.d/') && !filePath.endsWith('/users.d');
 
   // Check if this is a read-only file (users or authorize)
   const fileName = filePath.split('/').pop();
@@ -425,7 +434,7 @@ export function EditorPanel({ filePath, deployConsoleRef, onDeleteDictionary, on
         onCopy={handleCopyPath}
         onReset={handleResetClick}
         onSave={handleSaveFile}
-        onDelete={isDictionaryFile ? handleDeleteClick : undefined}
+        onDelete={isDictionaryFile || isUserFile ? handleDeleteClick : undefined}
         isSaving={isSaving}
       />
 
@@ -521,8 +530,12 @@ export function EditorPanel({ filePath, deployConsoleRef, onDeleteDictionary, on
         isOpen={isDeleteDialogOpen}
         onClose={() => setIsDeleteDialogOpen(false)}
         onConfirm={handleDeleteConfirm}
-        title="Delete Dictionary File"
-        description={`Are you sure you want to delete "${filePath.split('/').pop()}"? This will also remove it from the main dictionary file. This action cannot be undone.`}
+        title={isUserFile ? "Delete User File" : "Delete Dictionary File"}
+        description={
+          isUserFile
+            ? `Are you sure you want to delete "${filePath.split('/').pop()}"? This will remove the user file and its $INCLUDE statement from the authorize file. This action cannot be undone.`
+            : `Are you sure you want to delete "${filePath.split('/').pop()}"? This will also remove it from the main dictionary file. This action cannot be undone.`
+        }
         confirmText="Delete"
         cancelText="Cancel"
         variant="danger"

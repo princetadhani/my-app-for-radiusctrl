@@ -270,6 +270,19 @@ export async function createNewUser(filename: string): Promise<CreateUserRespons
   return await res.json();
 }
 
+export async function deleteUser(filename: string): Promise<{ success: boolean; message: string }> {
+  const res = await fetch(`${API_BASE_URL}/api/files/delete-user`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ filename }),
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || 'Failed to delete user');
+  }
+  return await res.json();
+}
+
 export async function deleteCoaFile(fileName: string): Promise<void> {
   await fetch(`${API_BASE_URL}/api/coa/files/${fileName}`, {
     method: 'DELETE',
