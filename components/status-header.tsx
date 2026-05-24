@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Radio, Command, Activity, Scroll, Wifi, Shield, User, UserPlus } from 'lucide-react';
+import { Radio, Command, Scroll, Wifi, Shield, User, UserPlus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { getRadiusStatus } from '@/lib/api';
 import Link from 'next/link';
@@ -14,7 +14,7 @@ interface StatusHeaderProps {
 
 export function StatusHeader({ currentFile, onNewUserClick }: StatusHeaderProps) {
   const [status, setStatus] = useState<'running' | 'stopped'>('running');
-  const [requestsPerSecond, setRequestsPerSecond] = useState(0);
+  // const [requestsPerSecond, setRequestsPerSecond] = useState(0); // Heartbeat metric temporarily disabled
   const router = useRouter();
   const pathname = usePathname();
 
@@ -33,7 +33,7 @@ export function StatusHeader({ currentFile, onNewUserClick }: StatusHeaderProps)
       try {
         const data = await getRadiusStatus();
         setStatus(data.status);
-        setRequestsPerSecond((data as any).requests_per_second || 0);
+        // setRequestsPerSecond((data as any).requests_per_second || 0); // Heartbeat metric temporarily disabled
       } catch (error) {
         console.error('Failed to fetch RADIUS status:', error);
         // Keep current status on error, don't crash the UI
@@ -235,10 +235,15 @@ export function StatusHeader({ currentFile, onNewUserClick }: StatusHeaderProps)
           <span>K</span>
         </button>
 
-        {/* Vertical Separator */}
+        {/* Vertical Separator before metrics (disabled with metrics) */}
+        {/**
+         * Heartbeat / requests-per-second metric temporarily disabled for aesthetics.
+         * To re-enable, restore the separator and Activity/Metrics block below.
+         */}
+        {/**
         <div className="w-px h-4" style={{ backgroundColor: 'hsl(225, 15%, 18%)' }} />
 
-        {/* Activity/Metrics Display */}
+        
         <div className="flex items-center gap-2">
           <Activity
             className="w-3.5 h-3.5"
@@ -258,8 +263,9 @@ export function StatusHeader({ currentFile, onNewUserClick }: StatusHeaderProps)
           </span>
         </div>
 
-        {/* Vertical Separator */}
+        
         <div className="w-px h-4" style={{ backgroundColor: 'hsl(225, 15%, 18%)' }} />
+        */}
 
         {/* User Info Section */}
         <div className="flex items-center gap-2">
@@ -278,7 +284,7 @@ export function StatusHeader({ currentFile, onNewUserClick }: StatusHeaderProps)
               color: 'hsl(210, 40%, 92%)',
             }}
           >
-            root
+            radius
           </span>
         </div>
       </div>
